@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mafia Game</title>
+</head>
+<body>
+<h1>Welcome to Mafia Game</h1>
+<div id="log"></div>
+<div id="timer">Phase timer: <span id="time-remaining">30</span> seconds</div>
+<button onclick="connect()">Connect</button>
+<button onclick="sendVote()">Send Vote</button>
+<button onclick="startGame()">Start Game</button>
+<script>
+    let ws;
+    let timerInterval;
+
+    function connect() {
+        const playerId = prompt("Enter your player ID:");
+        ws = new WebSocket(`ws://localhost:8080/ws?id=${playerId}`);
+
+        ws.onopen = () => {
+            log(`Connected as ${playerId}`);
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            log(`Message from server: ${JSON.stringify(message)}`);
+
+            // Handle role assignment
+            if (message.role) {
+                log(`Your role is: ${message.role}`);
+            }
+
+            // Handle phase updates
+            else if (message.phase) {
+                log(`Game phase: ${message.phase}`);
+                startTimer(30); // Reset timer for 30 seconds
+            }
+            else if (message.team){
+                console.log(`TEAM ${message.team}`)
+                log(`This player is ${message.team}`);
+            }
+            else if (message.winner) {
+                log(`Game over! ${message.winner}`);
+                alert(`Game over! ${message.winner}`);
+            }
+        };
+
+        ws.onclose = () => {
+            log("Disconnected from server");
+        };
+    }
+
+    function sendVote() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const voteFor = prompt("Enter player ID to vote for:");
+            ws.send(JSON.stringify({ action: "vote", vote: voteFor }));
+            console.log(`Voted for ${voteFor}`);
+        } else {
+            console.log("WebSocket is not connected");
+        }
+    }
+
+    function startTimer(seconds) {
+        clearInterval(timerInterval);
+        let timeRemaining = seconds;
+        document.getElementById("time-remaining").textContent = timeRemaining;
+
+        timerInterval = setInterval(() => {
+            timeRemaining -= 1;
+            document.getElementById("time-remaining").textContent = timeRemaining;
+
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                log("Phase ended.");
+            }
+        }, 1000);
+    }
+
+    function log(message) {
+        const logDiv = document.getElementById("log");
+        const p = document.createElement("p");
+        p.textContent = message;
+        logDiv.appendChild(p);
+    }
+
+    function startGame() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "start_game" }));
+            log("Game start request sent to the server.");
+        } else {
+            log("WebSocket is not connected");
+        }
+    }
+</script>
+</body>
+</html>
