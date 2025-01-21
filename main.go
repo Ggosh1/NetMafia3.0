@@ -107,16 +107,11 @@ func startGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(game.Players) < len(game.Roles) {
+	if len(game.Players) < 4 {
 		http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
 		return
 	}
-
-	if len(game.Roles) < len(game.Players) {
-		http.Error(w, "Not enough roles for all players", http.StatusBadRequest)
-		return
-	}
-
+	game.Roles = generateRoles(len(game.Players))
 	log.Println("Starting game...")
 	assignRoles()
 	game.GameStarted = true
@@ -128,15 +123,39 @@ func assignRoles() {
 	roles := shuffleRoles(game.Roles)
 	index := 0
 	for _, player := range game.Players {
-		if index >= len(roles) {
-			log.Printf("Error: not enough roles for all players")
-			return
-		}
 		player.Role = roles[index]
 		index++
 		log.Printf("Assigned role %s to player %s", player.Role, player.ID)
 	}
 	broadcastRoles()
+}
+
+func generateRoles(playerCount int) []string {
+	roles := []string{}
+
+	// Добавляем мафию (1 мафия на каждые 4 игрока)
+	mafiaCount := playerCount / 4
+	for i := 0; i < mafiaCount; i++ {
+		roles = append(roles, "mafia")
+	}
+
+	// Добавляем детектива (1 детектив на каждые 6 игроков)
+	if playerCount >= 6 {
+		roles = append(roles, "detective")
+	}
+
+	// Добавляем доктора, если игроков больше 5
+	if playerCount >= 5 {
+		roles = append(roles, "doctor")
+	}
+
+	// Остальные роли - мирные жители
+	villagerCount := playerCount - len(roles)
+	for i := 0; i < villagerCount; i++ {
+		roles = append(roles, "villager")
+	}
+
+	return roles
 }
 
 func shuffleRoles(roles []string) []string {
@@ -333,8 +352,9 @@ func processMessage(playerID string, message []byte) {
 	//log.Println("Mutex UNLocked")
 
 	var msg struct {
-		Action string `json:"action"`
-		Target string `json:"vote"`
+		Action  string `json:"action"`
+		Target  string `json:"vote"`
+		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Printf("Failed to parse message: %s", err)
@@ -357,8 +377,26 @@ func processMessage(playerID string, message []byte) {
 	} else if msg.Action == "start_game" {
 		log.Printf("Player %s requested to start the game", playerID)
 		startGame(nil, nil) // Запуск игры
+	} else if msg.Action == "chat" {
+		broadcastChatMessage(playerID, msg.Message)
 	}
 
+}
+
+func broadcastChatMessage(playerID, chatMessage string) {
+	message, _ := json.Marshal(struct {
+		PlayerID string `json:"playerID"`
+		Chat     string `json:"chat"`
+	}{
+		PlayerID: playerID,
+		Chat:     chatMessage,
+	})
+
+	for _, player := range game.Players {
+		if err := player.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+			log.Printf("Failed to send chat message to player %s: %v", player.ID, err)
+		}
+	}
 }
 
 func processVotes() {
