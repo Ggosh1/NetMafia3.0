@@ -179,6 +179,16 @@
         #chat-controls button:hover {
             background-color: #0056b3;
         }
+
+        .player-card.selected {
+            border-color: blue; /* Выделяем выбранного игрока синим */
+            box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
+        }
+
+        .player-card.dead.selected {
+            border-color: red; /* Отключаем визуальное выделение для мёртвого */
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -187,7 +197,6 @@
     <div id="timer">Phase timer: <span id="time-remaining">30</span> seconds</div>
     <div id="controls">
         <button onclick="connect()">Connect</button>
-        <button onclick="sendVote()">Send Vote</button>
         <button onclick="startGame()">Start Game</button>
     </div>
     <div id="player-grid"></div>
@@ -202,6 +211,7 @@
 <script>
     let ws;
     let timerInterval;
+    let selectedPlayerID = null; // Хранит ID выбранного игрока
 
     const players = {}; // Store player info dynamically
 
@@ -270,16 +280,25 @@
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
 
+            if (selectedPlayerID === playerID && isAlive) {
+                playerCard.classList.add("selected");
+            }
+
             playerCard.innerHTML = `
                     <div class="player-avatar"></div>
                     <div class="player-name">${playerID}</div>
                     <div>Status: ${isAlive ? "Alive" : "Dead"}</div>
                 `;
 
+            if (isAlive) {
+                playerCard.onclick = () => handleVoteClick(playerID, isAlive);
+            }
             playerGrid.appendChild(playerCard);
 
+
+
             // Update local players object
-            players[playerID] = { isAlive };
+            players[playerID] = isAlive;
         });
     }
 
@@ -348,6 +367,25 @@
         p.innerHTML = `<strong>${playerID}:</strong> ${chatMessage}`;
         logDiv.appendChild(p);
         logDiv.scrollTop = logDiv.scrollHeight; // Прокрутка вниз
+    }
+
+    function handleVoteClick(playerID, isAlive) {
+        if (!isAlive) {
+            log("You cannot vote for a dead player.");
+            return;
+        }
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            // Отправляем голос на сервер
+            ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+            log(`Voted for ${playerID}`);
+
+            // Обновляем локальный выбор
+            selectedPlayerID = playerID;
+            updatePlayerGrid(players); // Обновить отображение
+        } else {
+            log("WebSocket is not connected.");
+        }
     }
 
 </script>

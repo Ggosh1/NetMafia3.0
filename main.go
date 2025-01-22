@@ -20,6 +20,7 @@ type Player struct {
 	IsAlive  bool            `json:"is_alive"`
 	VotedFor string          `json:"voted_for"`
 	Action   string          `json:"action"` // Used for night actions
+	Aura     string          `json:"aura"`
 }
 
 type Game struct {
@@ -124,6 +125,13 @@ func assignRoles() {
 	index := 0
 	for _, player := range game.Players {
 		player.Role = roles[index]
+		if player.Role == "Альфа оборотень" || player.Role == "Волчий провидец" || player.Role == "Малыш оборотень" || player.Role == "Волчий страж" {
+			player.Aura = "bad"
+		} else if player.Role == "Шут" || player.Role == "Хакер" || player.Role == "Тюремщик" || player.Role == "Линчеватель" {
+			player.Aura = "unknown"
+		} else {
+			player.Aura = "good"
+		}
 		index++
 		log.Printf("Assigned role %s to player %s", player.Role, player.ID)
 	}
@@ -133,26 +141,56 @@ func assignRoles() {
 func generateRoles(playerCount int) []string {
 	roles := []string{}
 
-	// Добавляем мафию (1 мафия на каждые 4 игрока)
-	mafiaCount := playerCount / 4
-	for i := 0; i < mafiaCount; i++ {
-		roles = append(roles, "mafia")
-	}
+	//// Добавляем мафию (1 мафия на каждые 4 игрока)
+	//mafiaCount := playerCount / 4
+	//for i := 0; i < mafiaCount; i++ {
+	//	roles = append(roles, "mafia")
+	//}
+	//
+	//// Добавляем детектива (1 детектив на каждые 6 игроков)
+	//if playerCount >= 6 {
+	//	roles = append(roles, "detective")
+	//}
+	//
+	//// Добавляем доктора, если игроков больше 5
+	//if playerCount >= 5 {
+	//	roles = append(roles, "doctor")
+	//}
+	//
+	//// Остальные роли - мирные жители
+	//villagerCount := playerCount - len(roles)
+	//for i := 0; i < villagerCount; i++ {
+	//	roles = append(roles, "villager")
+	//}
 
-	// Добавляем детектива (1 детектив на каждые 6 игроков)
-	if playerCount >= 6 {
-		roles = append(roles, "detective")
-	}
+	switch playerCount {
+	case 4:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор"}
+	case 5:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун"}
+	case 6:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов"}
+	case 7:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер"}
+	case 8:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец"}
+	case 9:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум"}
+	case 10:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик"}
+	case 11:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель"}
+	case 12:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель", "Малыш оборотень"}
+	case 13:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель", "Малыш оборотень", "Провидец ауры"}
+	case 14:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель", "Малыш оборотень", "Провидец ауры", "Охотник на зверей"}
+	case 15:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель", "Малыш оборотень", "Провидец ауры", "Охотник на зверей", "Купидон"}
+	case 16:
+		roles = []string{"Альфа оборотень", "Провидец", "Шут", "Доктор", "Крикун", "Дитя цветов", "Хакер", "Волчий провидец", "Медиум", "Тюремщик", "Линчеватель", "Малыш оборотень", "Провидец ауры", "Охотник на зверей", "Купидон", "Волчий страж"}
 
-	// Добавляем доктора, если игроков больше 5
-	if playerCount >= 5 {
-		roles = append(roles, "doctor")
-	}
-
-	// Остальные роли - мирные жители
-	villagerCount := playerCount - len(roles)
-	for i := 0; i < villagerCount; i++ {
-		roles = append(roles, "villager")
 	}
 
 	return roles
@@ -215,6 +253,9 @@ func startNightPhase() {
 
 func processNightActions() {
 	log.Println("Processing night actions...")
+
+	// Собираем голоса (действия) только от оборотней
+	werewolfVotes := make(map[string]int)
 	nightActions := make(map[string]string)
 	game.Mutex.Lock()
 	log.Println("#5")
@@ -225,22 +266,69 @@ func processNightActions() {
 		}
 		player.Action = "" // Reset actions after processing
 	}
+
+	aliveWerewolves := 0
+	for _, player := range game.Players {
+		if player.IsAlive && player.Aura == "bad" {
+			aliveWerewolves++
+		}
+	}
+	doctorTarget := ""
 	game.Mutex.Unlock()
 	log.Println("#7")
 	// Mafia's action: eliminate a player
-	for id, action := range nightActions {
-		log.Println(id, action)
-		if game.Players[id].Role == "mafia" {
-			if target, exists := game.Players[action]; exists && target.IsAlive {
-				target.IsAlive = false
-				log.Printf("Mafia killed player %s", target.ID)
-			}
+	for id, targetID := range nightActions {
+		p := game.Players[id]
+		// Если aura=bad и игрок жив, учитываем его голос
+		if p != nil && p.IsAlive && p.Aura == "bad" {
+			werewolfVotes[targetID]++
+			log.Println("####", targetID, werewolfVotes[targetID])
 		}
+		if p != nil && p.IsAlive && p.Role == "Доктор" {
+			doctorTarget = targetID
+		}
+	}
+
+	// С threshold определяем, сколько нужно голосов
+	// Для упрощения логики используем округление вверх: (aliveWerewolves/2 + 1), если нечётно
+	voteThreshold := aliveWerewolves / 2
+	if aliveWerewolves%2 != 0 {
+		voteThreshold = aliveWerewolves/2 + 1
+	}
+
+	// Определяем лидера голосования среди оборотней
+	maxVotes := 0
+	var candidates []string
+	for targetID, count := range werewolfVotes {
+		if count > maxVotes {
+			maxVotes = count
+			candidates = []string{targetID}
+		} else if count == maxVotes {
+			candidates = append(candidates, targetID)
+		}
+	}
+
+	log.Printf("[Night] Werewolf votes: %v, threshold=%d, maxVotes=%d, candidates=%v",
+		werewolfVotes, voteThreshold, maxVotes, candidates,
+	)
+
+	// Убийство совершается, только если:
+	// 1) Есть ровно один лидер (candidates имеет длину 1)
+	// 2) Лидер набрал >= порога
+	if len(candidates) == 1 && maxVotes >= voteThreshold {
+		targetID := candidates[0]
+		targetPlayer, ok := game.Players[targetID]
+		if ok && targetPlayer.IsAlive && targetID != doctorTarget {
+			targetPlayer.IsAlive = false
+			log.Printf("[Night] Werewolves killed player %s", targetID)
+		}
+	} else {
+		log.Println("[Night] No one was killed by werewolves this night.")
 	}
 
 	// Detective's action: check a player's role
 	for id, action := range nightActions {
-		if game.Players[id].Role == "detective" {
+		if game.Players[id].Role == "Провидец" {
 			if target, exists := game.Players[action]; exists {
 				log.Printf("Detective checked player %s, role: %s", target.ID, target.Role)
 				message := fmt.Sprintf("Player %s is %s", target.ID, target.Role)
@@ -249,6 +337,19 @@ func processNightActions() {
 					Team string `json:"team"`
 				}{
 					Team: target.Role,
+				})
+				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+			}
+		}
+		if game.Players[id].Role == "Провидец ауры" {
+			if target, exists := game.Players[action]; exists {
+				log.Printf("Aura seer checked player %s, aura: %s", target.ID, target.Aura)
+				message := fmt.Sprintf("Player %s is %s", target.ID, target.Role)
+				log.Printf("Sending message to detective %s: %s", id, message)
+				teamCheckMessage, _ := json.Marshal(struct {
+					Team string `json:"team"`
+				}{
+					Team: target.Aura,
 				})
 				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
 			}
@@ -290,7 +391,7 @@ func checkGameOver() (bool, string) {
 
 	for _, player := range game.Players {
 		if player.IsAlive {
-			if player.Role == "mafia" {
+			if player.Aura == "bad" {
 				aliveMafia++
 			} else {
 				aliveVillagers++
@@ -371,7 +472,7 @@ func processMessage(playerID string, message []byte) {
 		if _, exists := game.Players[msg.Target]; exists {
 			game.Votes[msg.Target]++
 		}
-	} else if game.CurrentPhase == "night" && (player.Role == "mafia" || player.Role == "detective") {
+	} else if game.CurrentPhase == "night" && (player.Aura == "bad" || player.Role == "Провидец" || player.Role == "Провидец ауры") {
 		player.Action = msg.Target
 		log.Printf("Player %s (%s) targets %s", playerID, player.Role, msg.Target)
 	} else if msg.Action == "start_game" {
