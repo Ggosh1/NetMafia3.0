@@ -245,12 +245,15 @@
     function handleServerMessage(message) {
         log(`Message from server: ${JSON.stringify(message)}`);
 
+        if (message.time_remaining !== undefined) {
+            document.getElementById("time-remaining").textContent = message.time_remaining;
+        }
 
         // Handle role assignment
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
-            if (message.role === "Крикун") {
+            if (message.role === "Крикун" || message.role === "Дитя цветов") {
                 document.getElementById("screamer-controls").style.display = "block";
             }
         }
@@ -258,7 +261,6 @@
         // Handle phase updates
         if (message.phase) {
             log(`Game phase: ${message.phase}`);
-            startTimer(30); // Reset timer for 30 seconds
 
             if (message.phase === "night") {
                 document.body.classList.add("night");
@@ -283,7 +285,10 @@
             displayChatMessage(message.playerID, message.chat);
         }
         if (message.targeted_screamer_player) {
-            log(`Your current target: ${message.targetedPlayer}`);
+            log(`Your current scream target: ${message.targetedPlayer}`);
+        }
+        if (message.targeted_sun_flower_player){
+            log(`Your current flower target: ${message.targetedPlayer}`);
         }
     }
 
@@ -293,7 +298,7 @@
         const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
 
         Object.entries(playerStatus).forEach(([playerID, isAlive]) => {
-            if (playerID === "targetedScreamPlayer") return; // Пропускаем мета-данные
+            if (playerID === "targetedScreamPlayer" || playerID === "targetedSunFlowermPlayer") return; // Пропускаем мета-данные
             const playerCard = document.createElement("div");
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
@@ -333,21 +338,6 @@
         }
     }
 
-    function startTimer(seconds) {
-        clearInterval(timerInterval);
-        let timeRemaining = seconds;
-        document.getElementById("time-remaining").textContent = timeRemaining;
-
-        timerInterval = setInterval(() => {
-            timeRemaining -= 1;
-            document.getElementById("time-remaining").textContent = timeRemaining;
-
-            if (timeRemaining <= 0) {
-                clearInterval(timerInterval);
-                log("Phase ended.");
-            }
-        }, 1000);
-    }
 
     function log(message) {
         const logDiv = document.getElementById("log");
@@ -397,12 +387,19 @@
         }
 
         if (ws && ws.readyState === WebSocket.OPEN) {
-            // Отправляем голос на сервер
-            ws.send(JSON.stringify({ action: "vote", vote: playerID }));
-            log(`Voted for ${playerID}`);
+            if (selectedPlayerID === playerID) {
+                // Если клик по тому же игроку, отменяем голос
+                ws.send(JSON.stringify({ action: "cancel_vote", vote: playerID }));
+                log(`Vote for ${playerID} cancelled`);
+                selectedPlayerID = null;
+            } else {
+                // Отправляем голос на сервер
+                ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+                log(`Voted for ${playerID}`);
 
-            // Обновляем локальный выбор
-            selectedPlayerID = playerID;
+                // Обновляем локальный выбор
+                selectedPlayerID = playerID;
+            }
             updatePlayerGrid(players); // Обновить отображение
         } else {
             log("WebSocket is not connected.");

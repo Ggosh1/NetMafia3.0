@@ -14,25 +14,27 @@ import (
 import _ "net/http/pprof"
 
 type Player struct {
-	ID                     string          `json:"id"`
-	Conn                   *websocket.Conn `json:"-"`
-	Role                   string          `json:"role"`
-	IsAlive                bool            `json:"is_alive"`
-	VotedFor               string          `json:"voted_for"`
-	Action                 string          `json:"action"` // Used for night actions
-	Aura                   string          `json:"aura"`
-	TargetedScreamerPlayer string          `json:"targeted_screamer_player"`
+	ID                      string          `json:"id"`
+	Conn                    *websocket.Conn `json:"-"`
+	Role                    string          `json:"role"`
+	IsAlive                 bool            `json:"is_alive"`
+	VotedFor                string          `json:"voted_for"`
+	Action                  string          `json:"action"` // Used for night actions
+	Aura                    string          `json:"aura"`
+	TargetedScreamerPlayer  string          `json:"targeted_screamer_player"`
+	TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player"`
 }
 
 type Game struct {
-	Players      map[string]*Player
-	Roles        []string
-	Phase        string
-	Votes        map[string]int
-	Mutex        sync.Mutex
-	GameStarted  bool
-	CurrentPhase string
-	DayNumber    int
+	Players       map[string]*Player
+	Roles         []string
+	Phase         string
+	Votes         map[string]int
+	Mutex         sync.Mutex
+	GameStarted   bool
+	CurrentPhase  string
+	DayNumber     int
+	TimeRemaining int
 }
 
 var upgrader = websocket.Upgrader{
@@ -231,10 +233,7 @@ func startDayPhase() {
 	game.Mutex.Unlock()
 	//log.Println("Mutex UNLocked")
 	//log.Println("4")
-	time.AfterFunc(30*time.Second, func() {
-		log.Println("Day phase timer ended.")
-		endDayPhase()
-	})
+	startPhaseTimer(30, endDayPhase)
 }
 
 func startNightPhase() {
@@ -245,7 +244,7 @@ func startNightPhase() {
 	broadcastGameStatus() // Отправить клиентам обновление о фазе
 	game.Mutex.Unlock()
 	//log.Println("Mutex UNLocked")
-	time.AfterFunc(30*time.Second, func() {
+	startPhaseTimer(30, func() {
 		log.Println("Night phase timer ended.")
 		processNightActions()
 		endNightPhase()
@@ -443,10 +442,12 @@ func broadcastGameStatus() {
 	for _, player := range game.Players {
 		// Базовый статус, который отправляется всем
 		status := struct {
-			Phase                string          `json:"phase"`
-			Players              map[string]bool `json:"players"`
-			Day                  int             `json:"day"`
-			TargetedScreamPlayer string          `json:"targeted_scream_player,omitempty"`
+			Phase                   string          `json:"phase"`
+			Players                 map[string]bool `json:"players"`
+			Day                     int             `json:"day"`
+			TargetedScreamPlayer    string          `json:"targeted_scream_player,omitempty"`
+			TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player,omitempty"`
+			TimeRemaining           int             `json:"time_remaining"`
 		}{
 			Phase: game.CurrentPhase,
 			Players: func() map[string]bool {
@@ -456,12 +457,16 @@ func broadcastGameStatus() {
 				}
 				return players
 			}(),
-			Day: game.DayNumber,
+			Day:           game.DayNumber,
+			TimeRemaining: game.TimeRemaining,
 		}
 
 		// Добавляем информацию о цели только для "Крикуна"
 		if player.Role == "Крикун" && player.TargetedScreamerPlayer != "" {
 			status.TargetedScreamPlayer = player.TargetedScreamerPlayer
+		}
+		if player.Role == "Дитя цветов" && player.TargetedSunFlowerPlayer != "" {
+			status.TargetedSunFlowerPlayer = player.TargetedSunFlowerPlayer
 		}
 
 		// Сериализация в JSON
@@ -501,11 +506,16 @@ func processMessage(playerID string, message []byte) {
 	}
 
 	if game.CurrentPhase == "day" && msg.Action == "vote" {
-		log.Printf("Player %s voted for %s", playerID, msg.Target)
+		if player.VotedFor != "" {
+			// Удаляем предыдущий голос
+			game.Votes[player.VotedFor]--
+		}
 		if _, exists := game.Players[msg.Target]; exists {
+			player.VotedFor = msg.Target
+			log.Printf("Player %s voted for %s", playerID, msg.Target)
 			game.Votes[msg.Target]++
 		}
-	} else if game.CurrentPhase == "night" && (player.Aura == "bad" || player.Role == "Провидец" || player.Role == "Провидец ауры" || player.Role == "Доктор") {
+	} else if game.CurrentPhase == "night" && (player.Aura == "bad" || player.Role == "Провидец" || player.Role == "Провидец ауры" || player.Role == "Доктор") && msg.Action != "cancel_vote" {
 		player.Action = msg.Target
 		log.Printf("Player %s (%s) targets %s", playerID, player.Role, msg.Target)
 	} else if msg.Action == "start_game" {
@@ -513,13 +523,22 @@ func processMessage(playerID string, message []byte) {
 		startGame(nil, nil) // Запуск игры
 	} else if msg.Action == "chat" {
 		broadcastChatMessage(playerID, msg.Message)
+	} else if game.CurrentPhase == "day" && msg.Action == "cancel_vote" {
+		game.Votes[msg.Target]--
+	} else if game.CurrentPhase == "night" && msg.Action == "cancel_vote" {
+		player.Action = ""
 	} else if player.Role == "Крикун" && msg.Action == "scream_target" {
 		game.Mutex.Lock()
 		player.TargetedScreamerPlayer = msg.Target
 		game.Mutex.Unlock()
 		log.Printf("Screamer selected target: %s", msg.Target)
 		broadcastGameStatus()
-		return
+	} else if player.Role == "Дитя цветов" && msg.Action == "scream_target" {
+		game.Mutex.Lock()
+		player.TargetedSunFlowerPlayer = msg.Target
+		game.Mutex.Unlock()
+		log.Printf("FlowerChild selected target: %s", msg.Target)
+		broadcastGameStatus()
 	}
 
 }
@@ -541,11 +560,17 @@ func broadcastChatMessage(playerID, chatMessage string) {
 }
 
 func processVotes() {
+	flowerTarget := ""
 	// Подсчет количества живых игроков
 	alivePlayers := 0
 	for _, player := range game.Players {
 		if player.IsAlive {
 			alivePlayers++
+		}
+		if player.Role == "Дитя цветов" {
+			if player.TargetedSunFlowerPlayer != "" {
+				flowerTarget = game.Players[player.TargetedSunFlowerPlayer].ID
+			}
 		}
 	}
 
@@ -570,12 +595,15 @@ func processVotes() {
 	if maxVotes >= voteThreshold && len(candidates) == 1 {
 		excludedPlayerID := candidates[0]
 		if player, exists := game.Players[excludedPlayerID]; exists {
-			if player.Role == "Шут" {
+			flag := true
+			if player.ID == flowerTarget {
+				broadcastChatMessage("[SERVER]", fmt.Sprintf("Этого игрока нельзя казнить сегодня."))
+				flag = false
+			} else if player.Role == "Шут" {
 				broadcastWinner("Шут победил!")
 				game.GameStarted = false // Останавливаем игру
 				return
-			}
-			if player.Role == "Крикун" {
+			} else if player.Role == "Крикун" {
 				log.Println("##Крикун1")
 				if player.TargetedScreamerPlayer != "" {
 					targetPlayer := game.Players[player.TargetedScreamerPlayer]
@@ -585,8 +613,10 @@ func processVotes() {
 					}
 				}
 			}
-			player.IsAlive = false
-			log.Printf("Player %s was voted out.", excludedPlayerID)
+			if flag {
+				player.IsAlive = false
+				log.Printf("Player %s was voted out.", excludedPlayerID)
+			}
 		}
 	} else {
 		log.Println("No player was excluded.")
@@ -630,4 +660,24 @@ func gameStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(status)
+}
+
+func startPhaseTimer(duration int, endPhaseFunc func()) {
+	game.TimeRemaining = duration
+	broadcastGameStatus() // Отправляем начальное значение таймера
+
+	go func() {
+		for game.TimeRemaining > 0 {
+			time.Sleep(1 * time.Second)
+
+			game.Mutex.Lock()
+			game.TimeRemaining--
+			game.Mutex.Unlock()
+
+			broadcastGameStatus() // Обновляем таймер у всех клиентов
+		}
+
+		// Когда таймер истекает, вызываем переданную функцию (завершение фазы)
+		endPhaseFunc()
+	}()
 }
