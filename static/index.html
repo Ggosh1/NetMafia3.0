@@ -1,46 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Mafia Game</title>
+    <!-- Подключаем Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем React, ReactDOM и Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+        /* Сброс базовых отступов */
+        * {
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
             transition: background-color 0.5s ease, color 0.5s ease;
+            height: 100vh;  /* чтобы занять всю высоту экрана */
+            display: flex;
         }
         body.night {
             background-color: #2c3e50; /* Темный фон для ночи */
             color: #ecf0f1; /* Светлый текст */
         }
 
-        h1 {
-            text-align: center;
-            margin: 20px 0;
+        /* Главный контейнер – делим экран на две колонки: слева чат, справа сетка */
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr; /* Ширину левой колонки можно менять */
+            width: 100%;
         }
 
-        .game-container {
+        /* Левая панель с чатом */
+        .chat-container {
+            display: flex;
+            width: 31vw;
+            flex-direction: column;
+            border-right: 2px solid #ccc;
+            background-color: #f4f4f4;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        body.night .chat-container {
+            background-color: #34495e;
+        }
+
+        /* Заголовок чата (можно перенести куда угодно) */
+        .chat-header {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* Лог и сообщения */
+        #log {
+            flex: 1;             /* занимает всё доступное пространство по высоте */
+            overflow-y: auto;    /* прокрутка */
+            max-height: 75vh; /* или любое другое подходящее значение */
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            background-color: #fff;
+            color: #000;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        body.night #log {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+
+        /* Роль игрока и таймер можно показать где-то в чате */
+        #role-display,
+        #timer {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        #role-display {
+            color: #007bff; /* Синий цвет для роли днём */
+            transition: color 0.5s ease;
+        }
+        body.night #role-display {
+            color: #ecf0f1; /* Светлый цвет для роли ночью */
+        }
+
+        /* Поле и кнопка чата */
+        #chat-controls {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+        }
+        #chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #chat-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        #chat-controls button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        #chat-controls button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Контейнер для кнопок внизу */
+        .bottom-controls {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 1200px;
+            gap: 10px;
+            padding: 10px;
+        }
+        /* Кнопки Start/Connect и т.д. */
+        .bottom-controls button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .bottom-controls button:hover {
+            background-color: #0056b3;
         }
 
+        /* Правая панель с сеткой игроков */
+        .player-grid-container {
+            padding: 10px;
+            width: 69vw;
+            margin-left: 12vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+        }
         #player-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            width: 100vw;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, auto);
             gap: 10px;
-            margin: 20px 0;
-            width: 100%;
+            max-width: 1200px; /* Можно убрать или изменить */
         }
 
+        /* Карточки игроков */
         .player-card {
             background: #fff;
             border: 2px solid #ccc;
@@ -48,19 +167,17 @@
             padding: 10px;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            color: #000; /* Цвет текста днем */
+            color: #000; /* Цвет текста днём */
             transition: background-color 0.5s ease, color 0.5s ease;
         }
-
         body.night .player-card {
             background: #34495e; /* Темный фон карточки ночью */
-            color: #ecf0f1; /* Светлый текст ночью */
+            color: #ecf0f1;      /* Светлый текст ночью */
         }
 
         .player-card.alive {
             border-color: green;
         }
-
         .player-card.dead {
             border-color: red;
             opacity: 0.6;
@@ -78,172 +195,117 @@
             font-weight: bold;
         }
 
-        #log {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px;
-            background-color: #fff;
-            color: #000;
-            transition: background-color 0.5s ease, color 0.5s ease;
-        }
-
-        #log:empty {
-            display: none; /* Скрыть лог, если он пуст */
-        }
-
-        body.night #log {
-            background-color: #34495e; /* Темный фон логов ночью */
-            color: #ecf0f1; /* Светлый текст логов ночью */
-        }
-
-
-        #controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        #timer {
-            margin-bottom: 10px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 14px;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .players-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin: 20px auto;
-        }
-
-        #role-display {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #007bff; /* Синий цвет для роли */
-            transition: color 0.5s ease;
-        }
-
-        body.night #role-display {
-            color: #ecf0f1; /* Светлый цвет для роли ночью */
-        }
-
-        #chat-controls {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        #chat-input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        #chat-input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-        #chat-controls button {
-            padding: 10px 20px;
-            font-size: 14px;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-
-        #chat-controls button:hover {
-            background-color: #0056b3;
-        }
-
         .player-card.selected {
             border-color: blue; /* Выделяем выбранного игрока синим */
             box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
         }
-
         .player-card.dead.selected {
             border-color: red; /* Отключаем визуальное выделение для мёртвого */
             box-shadow: none;
         }
-
         .player-card.targeted {
             border-color: orange; /* Цвет рамки для цели */
             box-shadow: 0 0 10px rgba(255, 165, 0, 0.8); /* Эффект подсветки */
         }
+
+        /* Кнопка выхода (крестик) в правом верхнем углу */
+        #exitBtn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background 0.3s;
+        }
+        #exitBtn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
     </style>
 </head>
 <body>
-<h1>Welcome to Mafia Game</h1>
-<div class="game-container">
-    <div id="timer">Phase timer: <span id="time-remaining">30</span> seconds</div>
-    <div id="controls">
-        <button onclick="connect()">Connect</button>
-        <button onclick="startGame()">Start Game</button>
+<button id="exitBtn" onclick="handleExit()">×</button>
+<div class="container">
+    <!-- Левая колонка (чат, логи, таймер, роль, кнопки) -->
+    <div class="chat-container">
+        <div class="chat-header">Wolvesville (Mafia) Chat</div>
+
+        <!-- Лог событий -->
+        <div id="log"></div>
+
+        <!-- Отображение роли и таймера (при желании можно поменять порядок) -->
+        <div id="role-display">Your role: Not assigned</div>
+        <div id="timer">Phase timer: <span id="time-remaining">30</span> seconds</div>
+
+        <!-- Чат -->
+        <div id="chat-controls">
+            <input type="text" id="chat-input" placeholder="Type your message..."/>
+            <button onclick="sendChatMessage()">Send</button>
+        </div>
+
+        <!-- Нижний блок с кнопками (Connect, Start, Screamer controls) -->
+        <div class="bottom-controls">
+            <div id="controls">
+                <button onclick="startGame()">Start Game</button>
+                <div id="screamer-controls" style="display: none;">
+                    <button onclick="selectTarget()">Choose Target</button>
+                    <button onclick="clearTarget()">Clear Target</button>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <div id="screamer-controls" style="display: none;">
-        <button onclick="selectTarget()">Choose Target</button>
-        <button onclick="clearTarget()">Clear Target</button>
+
+    <!-- Правая колонка (сетка игроков) -->
+    <div class="player-grid-container">
+        <div id="player-grid"></div>
     </div>
-    <div id="player-grid"></div>
-    <div id="log"></div>
-    <div id="chat-controls">
-        <input type="text" id="chat-input" placeholder="Type your message..." />
-        <button onclick="sendChatMessage()">Send</button>
-    </div>
-    <div id="role-display">Your role: Not assigned</div>
 </div>
 
 <script>
+    // Добавляем обработчик beforeunload для корректного закрытия WebSocket
+    window.addEventListener("beforeunload", function () {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.close(1000, "Tab closed");
+        }
+    });
     let ws;
     let timerInterval;
     let selectedPlayerID = null; // Хранит ID выбранного игрока
 
     const players = {}; // Store player info dynamically
+    let currentVotes = {};
+    const params = new URLSearchParams(window.location.search);
+    const playerId = params.get("id");
+    if (!playerId) {
+        alert("ID игрока не указан. Пожалуйста, заходите через страницу входа.");
+    }
+    connect();
 
     function connect() {
-        const playerId = prompt("Enter your player ID:");
-        ws = new WebSocket(`ws://localhost:8080/ws?id=${playerId}`);
+        if (!playerId) {
+            log("ID игрока не найден. Зайдите через страницу входа.");
+            return;
+        }
 
-        ws.onopen = () => {
-            log(`Connected as ${playerId}`);
-        };
-
+        ws = new WebSocket(`ws://localhost:8080/ws?id=${encodeURIComponent(playerId)}`);
+        ws.onopen = () => { log(`Connected as ${playerId}`); };
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             handleServerMessage(message);
         };
-
-        ws.onclose = () => {
-            log("Disconnected from server");
-        };
+        ws.onclose = () => { log("Disconnected from server"); };
     }
 
+
     function handleServerMessage(message) {
-        log(`Message from server: ${JSON.stringify(message)}`);
+        //log(`Message from server: ${JSON.stringify(message)}`);
 
         if (message.time_remaining !== undefined) {
             document.getElementById("time-remaining").textContent = message.time_remaining;
@@ -260,7 +322,7 @@
 
         // Handle phase updates
         if (message.phase) {
-            log(`Game phase: ${message.phase}`);
+            //log(`Game phase: ${message.phase}`);
 
             if (message.phase === "night") {
                 document.body.classList.add("night");
@@ -279,6 +341,7 @@
         if (message.winner) {
             log(`Game over! ${message.winner}`);
             alert(`Game over! ${message.winner}`);
+            window.location.href = '/profile?id=' + encodeURIComponent(playerId);
         }
 
         if (message.chat) {
@@ -290,6 +353,19 @@
         if (message.targeted_sun_flower_player){
             log(`Your current flower target: ${message.targetedPlayer}`);
         }
+
+        if (message.votes) {
+            // votes: { "player1": "player2", ... }
+            currentVotes = message.votes;
+            // Перерисовываем сетку, чтобы у каждого было видно, за кого он голосует
+            updatePlayerGrid(players);
+        }
+
+        if (message.type && message.type === "playerList") {
+            updatePlayerGrid(message.players);
+            return;
+        }
+
     }
 
     function updatePlayerGrid(playerStatus) {
@@ -315,6 +391,15 @@
                     <div class="player-name">${playerID}</div>
                     <div>Status: ${isAlive ? "Alive" : "Dead"}</div>
                 `;
+
+            const votedFor = currentVotes[playerID];
+            if (votedFor) {
+                // Добавим элемент с табличкой
+                const voteSign = document.createElement("div");
+                voteSign.classList.add("vote-sign");
+                voteSign.textContent = "⚔️ " + votedFor + " ⚔️"; // Можно вывести ID или имя
+                playerCard.appendChild(voteSign);
+            }
 
             if (isAlive) {
                 playerCard.onclick = () => handleVoteClick(playerID, isAlive);
@@ -344,6 +429,8 @@
         const p = document.createElement("p");
         p.textContent = message;
         logDiv.appendChild(p);
+        // Прокручиваем вниз к новому сообщению
+        logDiv.scrollTop = logDiv.scrollHeight;
     }
 
     function startGame() {
@@ -418,6 +505,32 @@
     function clearTarget() {
         ws.send(JSON.stringify({ action: "scream_target", vote: "" }));
         log("Target cleared.");
+    }
+
+    function handleExit() {
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get("id");
+        if (!username) {
+            alert("Ошибка: имя пользователя не указано.");
+            return;
+        }
+        if (confirm("Вы действительно хотите выйти из игры?")) {
+            fetch('/leaveroom?id=' + encodeURIComponent(username))
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Выход выполнен успешно:", data);
+                    window.location.href = '/profile?id=' + encodeURIComponent(username);
+                })
+                .catch(error => {
+                    console.error("Ошибка при выходе из комнаты:", error);
+                    alert("Ошибка при выходе: " + error.message);
+                });
+        }
     }
 
 </script>

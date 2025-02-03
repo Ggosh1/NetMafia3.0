@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 import _ "net/http/pprof"
+import _ "github.com/lib/pq"
 
 type Player struct {
 	ID                      string          `json:"id"`
@@ -23,6 +25,7 @@ type Player struct {
 	Aura                    string          `json:"aura"`
 	TargetedScreamerPlayer  string          `json:"targeted_screamer_player"`
 	TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player"`
+	Hacked                  bool            `json:"hacked"`
 }
 
 type Game struct {
@@ -49,55 +52,441 @@ var game = Game{
 	Roles:   []string{"mafia", "detective", "villager", "villager"}, // Example roles
 }
 
-func main() {
-	http.HandleFunc("/ws", handleConnections)
-	//http.HandleFunc("/start", startGame)
-	http.HandleFunc("/status", gameStatus)
-	http.Handle("/", http.FileServer(http.Dir("./static")))
-
-	log.Println("Server started on :8080")
-	log.Println(http.ListenAndServe(":8080", nil))
+type Room struct {
+	ID      string             `json:"id"`
+	Players map[string]*Player `json:"players"` // Ключ – ID игрока
+	// Здесь можно добавить дополнительные поля (например, состояние игры, таймер, и т.д.)
 }
 
+var (
+	rooms    = make(map[string]*Room) // все созданные комнаты
+	roomLock sync.Mutex               // для синхронизации доступа к rooms
+)
+
+func generateRoomID() string {
+	return fmt.Sprintf("room-%d", time.Now().UnixNano()+int64(rand.Intn(1000)))
+}
+
+// joinRoom ищет свободную комнату (где количество игроков < 16) и выбирает ту, где уже больше всего игроков.
+// Если ни одной такой комнаты нет, создается новая.
+func joinRoom(p *Player) *Room {
+	roomLock.Lock()
+	defer roomLock.Unlock()
+
+	var bestRoom *Room
+	for _, room := range rooms {
+		if len(room.Players) < 16 {
+			if bestRoom == nil || len(room.Players) > len(bestRoom.Players) {
+				bestRoom = room
+			}
+		}
+	}
+	if bestRoom == nil {
+		// Нет свободной комнаты — создаём новую
+		bestRoom = &Room{
+			ID:      generateRoomID(),
+			Players: make(map[string]*Player),
+		}
+		rooms[bestRoom.ID] = bestRoom
+		log.Printf("Создана новая комната: %s", bestRoom.ID)
+	}
+	// Добавляем игрока в выбранную комнату
+	bestRoom.Players[p.ID] = p
+	log.Printf("Игрок %s добавлен в комнату %s (игроков: %d)", p.ID, bestRoom.ID, len(bestRoom.Players))
+	return bestRoom
+}
+
+// joinRoomHandler — HTTP-обработчик для присоединения к игровой комнате.
+// Если запись о игроке не найдена в game.Players, создаём её.
+func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
+	// Ожидается, что игрок передаст свой идентификатор в параметре "id"
+	playerID := r.URL.Query().Get("id")
+	if playerID == "" {
+		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, существует ли запись об игроке в game.Players
+	game.Mutex.Lock()
+	player, exists := game.Players[playerID]
+	if !exists {
+		// Если записи нет, создаём нового игрока (без активного WebSocket, пока что)
+		player = &Player{
+			ID:      playerID,
+			IsAlive: true,
+		}
+		game.Players[playerID] = player
+		log.Printf("Создан новый игрок %s через joinRoomHandler", playerID)
+	}
+	game.Mutex.Unlock()
+
+	// Теперь пытаемся добавить игрока в комнату
+	room := joinRoom(player)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"roomId":  room.ID,
+		"players": len(room.Players),
+	})
+}
+
+// leaveRoomHandler удаляет игрока из комнаты и из глобальной карты game.Players.
+func leaveRoomHandler(w http.ResponseWriter, r *http.Request) {
+	playerID := r.URL.Query().Get("id")
+	if playerID == "" {
+		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
+		return
+	}
+
+	// Удаляем игрока из глобальной карты комнат.
+	roomLock.Lock()
+	for _, room := range rooms {
+		if _, exists := room.Players[playerID]; exists {
+			delete(room.Players, playerID)
+			log.Printf("Игрок %s покинул комнату %s", playerID, room.ID)
+			break
+		}
+	}
+	roomLock.Unlock()
+
+	// Также удаляем игрока из глобальной карты game.Players.
+	game.Mutex.Lock()
+	delete(game.Players, playerID)
+	game.Mutex.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+var db *sql.DB
+
+// registerHandler – обработчик регистрации пользователя (пример)
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type RegistrationRequest struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	var req RegistrationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Не указано имя или пароль", http.StatusBadRequest)
+		return
+	}
+
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)", req.Username).Scan(&exists)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "Пользователь с таким именем уже существует", http.StatusBadRequest)
+		return
+	}
+
+	// Здесь пароль сохраняется в открытом виде — для демонстрации.
+	_, err = db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", req.Username, req.Password)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Пользователь успешно зарегистрирован",
+	})
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	// Устанавливаем заголовок, чтобы клиент ожидал JSON
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Метод не поддерживается"})
+		return
+	}
+
+	type LoginRequest struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный формат данных"})
+		return
+	}
+
+	if req.Username == "" || req.Password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Не указано имя или пароль"})
+		return
+	}
+
+	// Извлекаем пароль пользователя из БД
+	var storedPassword string
+	err := db.QueryRow("SELECT password FROM users WHERE username=$1", req.Username).Scan(&storedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Пользователь не найден"})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ошибка базы данных"})
+		return
+	}
+
+	// Для демонстрационных целей сравниваем пароли как есть (в реальном приложении используйте хэширование)
+	if req.Password != storedPassword {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный пароль"})
+		return
+	}
+
+	// Если всё успешно, возвращаем JSON с успехом
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Вход выполнен успешно",
+	})
+}
+
+// serveProfile отдает страницу профиля (profile.html)
+func serveProfile(w http.ResponseWriter, r *http.Request) {
+	// Можно, например, проверить наличие параметра id в URL.
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "ID не указан", http.StatusBadRequest)
+		return
+	}
+	http.ServeFile(w, r, "./static/profile.html")
+}
+
+// serveWelcome отдает страницу приветствия (welcome.html)
+func serveWelcome(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./static/welcome.html")
+}
+
+// serveGame отдает игровую страницу (index.html)
+func serveGame(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./static/index.html")
+}
+
+func main() {
+	sysConnStr := "host=localhost port=5432 user=postgres password=123 dbname=postgres sslmode=disable"
+	sysDB, err := sql.Open("postgres", sysConnStr)
+	if err != nil {
+		log.Fatal("Ошибка подключения к системной БД:", err)
+	}
+	defer sysDB.Close()
+
+	if err = sysDB.Ping(); err != nil {
+		log.Fatal("Ошибка подключения к системной БД:", err)
+	}
+
+	// Имя целевой базы данных
+	targetDBName := "mafia_game"
+
+	// Проверяем, существует ли база данных targetDBName.
+	var exists bool
+	checkQuery := "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1)"
+	err = sysDB.QueryRow(checkQuery, targetDBName).Scan(&exists)
+	if err != nil {
+		log.Fatal("Ошибка проверки существования базы данных:", err)
+	}
+
+	if !exists {
+		log.Printf("База данных %s не существует. Создаем...", targetDBName)
+		// Создаем базу данных.
+		_, err = sysDB.Exec(fmt.Sprintf("CREATE DATABASE %s", targetDBName))
+		if err != nil {
+			log.Fatal("Ошибка создания базы данных:", err)
+		}
+		log.Printf("База данных %s успешно создана.", targetDBName)
+	} else {
+		log.Printf("База данных %s уже существует.", targetDBName)
+	}
+
+	// Закрываем системное соединение и подключаемся к целевой базе данных.
+	targetConnStr := fmt.Sprintf("host=localhost port=5432 user=postgres password=123 dbname=%s sslmode=disable", targetDBName)
+	db, err = sql.Open("postgres", targetConnStr)
+	if err != nil {
+		log.Fatal("Ошибка подключения к целевой базе данных:", err)
+	}
+	defer db.Close()
+
+	if err = db.Ping(); err != nil {
+		log.Fatal("Ошибка подключения к целевой базе данных:", err)
+	}
+
+	// Создаем таблицу users, если её нет.
+	createTableQuery := `
+	CREATE TABLE IF NOT EXISTS users (
+		id SERIAL PRIMARY KEY,
+		username TEXT UNIQUE NOT NULL,
+		password TEXT NOT NULL
+	);
+	`
+	if _, err := db.Exec(createTableQuery); err != nil {
+		log.Fatal("Ошибка создания таблицы:", err)
+	}
+
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/profile", serveProfile) // Страница профиля
+	// Обработчик для приветственной страницы
+	http.HandleFunc("/", serveWelcome)
+	// Обработчик для игровой страницы – пользователь должен переходить по /game?id=<имя_пользователя>
+	http.HandleFunc("/game", serveGame)
+	// WebSocket и остальные обработчики остаются без изменений
+	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/status", gameStatus)
+	http.HandleFunc("/joinroom", joinRoomHandler)
+	http.HandleFunc("/leaveroom", leaveRoomHandler)
+
+	// Если вам нужны статические файлы (например, картинки, css, js) – можно раздать их по префиксу /static/
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
+	log.Println("Server started on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// Глобальный мап для хранения ID игроков, которые покинули игру навсегда.
+var disconnectedPlayers = make(map[string]bool)
+
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	// Обновляем соединение через upgrader
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Upgrade error:", err)
 		return
 	}
 	defer conn.Close()
 
-	var player Player
-	player.ID = r.URL.Query().Get("id")
-	if player.ID == "" {
-		player.ID = fmt.Sprintf("player-%d", len(game.Players)+1)
+	// Получаем ID игрока из параметра URL. Если не указан, генерируем.
+	playerID := r.URL.Query().Get("id")
+	if playerID == "" {
+		playerID = fmt.Sprintf("player-%d", len(game.Players)+1)
 	}
-	player.Conn = conn
-	player.IsAlive = true
 
+	// Блокируем глобальный мьютекс для проверки и добавления игрока.
 	game.Mutex.Lock()
-	//log.Println("Mutex Locked")
-	game.Players[player.ID] = &player
+	// Если игрок уже покинул игру навсегда, не разрешаем новое подключение.
+	if disconnectedPlayers[playerID] {
+		game.Mutex.Unlock()
+		log.Printf("Reject connection: player %s is marked as disconnected permanently", playerID)
+		conn.WriteMessage(websocket.CloseMessage, []byte("You have left the game permanently"))
+		return
+	}
+	// Если уже существует активное соединение с этим ID, отклоняем второе.
+	if existing, ok := game.Players[playerID]; ok && existing.Conn != nil {
+		game.Mutex.Unlock()
+		log.Printf("Reject connection: player %s is already connected", playerID)
+		conn.WriteMessage(websocket.CloseMessage, []byte("Player already connected"))
+		return
+	}
+
+	// Создаем нового игрока и добавляем его в глобальную карту.
+	player := &Player{
+		ID:      playerID,
+		Conn:    conn,
+		IsAlive: true,
+	}
+	game.Players[playerID] = player
+
+	// Формируем снимок активных игроков (только с открытыми соединениями)
+	playersSnapshot := make(map[string]bool)
+	for id, p := range game.Players {
+		if p.Conn != nil { // только активные соединения
+			playersSnapshot[id] = p.IsAlive
+		}
+	}
 	game.Mutex.Unlock()
-	//log.Println("Mutex UNLocked")
 
-	log.Printf("Player %s connected. Total players: %d", player.ID, len(game.Players))
+	// Отправляем новому клиенту начальное сообщение со списком игроков
+	initialStatus := struct {
+		Type    string          `json:"type"`
+		Players map[string]bool `json:"players"`
+	}{
+		Type:    "playerList",
+		Players: playersSnapshot,
+	}
+	if err := conn.WriteJSON(initialStatus); err != nil {
+		log.Printf("Ошибка отправки начального состояния игроку %s: %v", playerID, err)
+	}
 
+	// Немедленно обновляем список для всех подключенных клиентов
+	broadcastPlayerList()
+
+	log.Printf("Player %s connected. Total active players: %d", playerID, len(game.Players))
+	// Основной цикл чтения сообщений
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("Player %s disconnected.", player.ID)
+			log.Printf("Player %s disconnected: %v", playerID, err)
+			// При разрыве соединения удаляем игрока и помечаем его как отключённого
 			game.Mutex.Lock()
-			//log.Println("Mutex Locked")
-			delete(game.Players, player.ID)
+			delete(game.Players, playerID)
+			disconnectedPlayers[playerID] = true
 			game.Mutex.Unlock()
-			//log.Println("Mutex UNLocked")
+
+			// Если используется логика комнат, удаляем игрока и из них (если есть)
+			roomLock.Lock()
+			for _, room := range rooms {
+				if _, exists := room.Players[playerID]; exists {
+					delete(room.Players, playerID)
+					log.Printf("Player %s removed from room %s", playerID, room.ID)
+				}
+			}
+			roomLock.Unlock()
+
+			// Обновляем список активных игроков для оставшихся клиентов
+			broadcastPlayerList()
 			break
 		}
-
-		log.Printf("Message from %s: %s", player.ID, string(message))
-		processMessage(player.ID, message)
+		log.Printf("Message from %s: %s", playerID, string(message))
+		processMessage(playerID, message)
 	}
+}
+
+// Функция для рассылки обновлённого списка активных игроков
+func broadcastPlayerList() {
+	game.Mutex.Lock()
+	playersSnapshot := make(map[string]bool)
+	for id, p := range game.Players {
+		if p.Conn != nil { // учитываем только активные соединения
+			playersSnapshot[id] = p.IsAlive
+		}
+	}
+	game.Mutex.Unlock()
+
+	update := struct {
+		Type    string          `json:"type"`
+		Players map[string]bool `json:"players"`
+	}{
+		Type:    "playerList",
+		Players: playersSnapshot,
+	}
+
+	game.Mutex.Lock()
+	for _, p := range game.Players {
+		if p.Conn != nil {
+			if err := p.Conn.WriteJSON(update); err != nil {
+				log.Printf("Ошибка отправки списка игрока %s: %v", p.ID, err)
+			}
+		}
+	}
+	game.Mutex.Unlock()
 }
 
 func startGame(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +664,7 @@ func processNightActions() {
 		}
 	}
 	doctorTarget := ""
+	hackerTarget := ""
 	game.Mutex.Unlock()
 	log.Println("#7")
 	// Mafia's action: eliminate a player
@@ -290,6 +680,27 @@ func processNightActions() {
 			doctorTarget = targetID
 			log.Println("####doctorTarget", doctorTarget)
 
+		}
+		if p != nil && p.IsAlive && p.Role == "Хакер" {
+			hackerTarget = targetID
+			log.Printf("Hacker targeted %s", hackerTarget)
+
+		}
+	}
+
+	if hackerTarget != "" {
+		if target, exists := game.Players[hackerTarget]; exists {
+			target.Hacked = true
+			log.Printf("Player %s has been hacked and will lose voting/chat rights", target.ID)
+			message, _ := json.Marshal(struct {
+				PlayerID string `json:"playerID"`
+				Chat     string `json:"chat"`
+			}{
+				PlayerID: "[SERVER]",
+				Chat:     "Вы были взломаны! Вы не можете голосовать и писать в чат. Вы погибните в конце дня.",
+			})
+
+			target.Conn.WriteMessage(websocket.TextMessage, message)
 		}
 	}
 
@@ -402,9 +813,12 @@ func endNightPhase() {
 func checkGameOver() (bool, string) {
 	aliveMafia := 0
 	aliveVillagers := 0
-
+	hackerAlive := false
 	for _, player := range game.Players {
 		if player.IsAlive {
+			if player.Role == "Хакер" {
+				hackerAlive = true
+			}
 			if player.Aura == "bad" {
 				aliveMafia++
 			} else {
@@ -413,12 +827,15 @@ func checkGameOver() (bool, string) {
 		}
 	}
 
-	if aliveMafia == 0 {
+	if aliveMafia == 0 && !hackerAlive {
 		return true, "Villagers win!"
 	}
 
-	if aliveMafia >= aliveVillagers {
+	if aliveMafia >= aliveVillagers && !hackerAlive {
 		return true, "Mafia wins!"
+	}
+	if hackerAlive && aliveVillagers == 0 && aliveMafia == 0 {
+		return true, "Hacker win"
 	}
 
 	return false, ""
@@ -448,6 +865,7 @@ func broadcastGameStatus() {
 			TargetedScreamPlayer    string          `json:"targeted_scream_player,omitempty"`
 			TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player,omitempty"`
 			TimeRemaining           int             `json:"time_remaining"`
+			Votes                   map[string]int  `json:"votes"`
 		}{
 			Phase: game.CurrentPhase,
 			Players: func() map[string]bool {
@@ -459,6 +877,7 @@ func broadcastGameStatus() {
 			}(),
 			Day:           game.DayNumber,
 			TimeRemaining: game.TimeRemaining,
+			Votes:         game.Votes,
 		}
 
 		// Добавляем информацию о цели только для "Крикуна"
@@ -505,25 +924,38 @@ func processMessage(playerID string, message []byte) {
 		return
 	}
 
-	if game.CurrentPhase == "day" && msg.Action == "vote" {
-		if player.VotedFor != "" {
+	if game.CurrentPhase == "day" && msg.Action == "vote" && !player.Hacked {
+		if msg.Target == player.VotedFor {
 			// Удаляем предыдущий голос
 			game.Votes[player.VotedFor]--
+			if game.Votes[player.VotedFor] < 0 {
+				game.Votes[player.VotedFor] = 0
+			}
+			player.VotedFor = ""
+
+		} else {
+			if player.VotedFor != "" {
+				game.Votes[player.VotedFor]--
+				if game.Votes[player.VotedFor] < 0 {
+					game.Votes[player.VotedFor] = 0
+				}
+			}
+			// Ставим новый
+			if _, ok := game.Players[msg.Target]; ok {
+				player.VotedFor = msg.Target
+				game.Votes[msg.Target]++
+				log.Printf("Player %s voted for %s", playerID, msg.Target)
+			}
 		}
-		if _, exists := game.Players[msg.Target]; exists {
-			player.VotedFor = msg.Target
-			log.Printf("Player %s voted for %s", playerID, msg.Target)
-			game.Votes[msg.Target]++
-		}
-	} else if game.CurrentPhase == "night" && (player.Aura == "bad" || player.Role == "Провидец" || player.Role == "Провидец ауры" || player.Role == "Доктор") && msg.Action != "cancel_vote" {
+	} else if game.CurrentPhase == "night" && (player.Aura == "bad" || player.Role == "Провидец" || player.Role == "Провидец ауры" || player.Role == "Доктор" || player.Role == "Хакер") && msg.Action != "cancel_vote" {
 		player.Action = msg.Target
 		log.Printf("Player %s (%s) targets %s", playerID, player.Role, msg.Target)
 	} else if msg.Action == "start_game" {
 		log.Printf("Player %s requested to start the game", playerID)
 		startGame(nil, nil) // Запуск игры
-	} else if msg.Action == "chat" {
+	} else if msg.Action == "chat" && !player.Hacked {
 		broadcastChatMessage(playerID, msg.Message)
-	} else if game.CurrentPhase == "day" && msg.Action == "cancel_vote" {
+	} else if game.CurrentPhase == "day" && msg.Action == "cancel_vote" && !player.Hacked {
 		game.Votes[msg.Target]--
 	} else if game.CurrentPhase == "night" && msg.Action == "cancel_vote" {
 		player.Action = ""
@@ -571,6 +1003,10 @@ func processVotes() {
 			if player.TargetedSunFlowerPlayer != "" {
 				flowerTarget = game.Players[player.TargetedSunFlowerPlayer].ID
 			}
+		}
+		if player.Hacked {
+			player.IsAlive = false
+			log.Printf("Player %s was killed by hacker", player.ID)
 		}
 	}
 
