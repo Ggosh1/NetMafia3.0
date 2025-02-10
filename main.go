@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	_ "net/http/pprof"
+
+	_ "github.com/lib/pq"
 )
-import _ "net/http/pprof"
-import _ "github.com/lib/pq"
 
 type Player struct {
 	ID                      string          `json:"id"`
@@ -21,7 +23,7 @@ type Player struct {
 	Role                    string          `json:"role"`
 	IsAlive                 bool            `json:"is_alive"`
 	VotedFor                string          `json:"voted_for"`
-	Action                  string          `json:"action"` // Used for night actions
+	Action                  string          `json:"action"`
 	Aura                    string          `json:"aura"`
 	TargetedScreamerPlayer  string          `json:"targeted_screamer_player"`
 	TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player"`
