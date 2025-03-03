@@ -11,7 +11,7 @@ import (
 var Db *sql.DB
 
 func InitDB() {
-	sysConnStr := "host=localhost port=5432 user=postgres password=123 dbname=postgres sslmode=disable"
+	sysConnStr := "host=db port=5432 user=postgres password=123 dbname=postgres sslmode=disable"
 	sysDB, err := sql.Open("postgres", sysConnStr)
 	if err != nil {
 		log.Fatal("Ошибка подключения к системной БД:", err)
@@ -42,7 +42,7 @@ func InitDB() {
 		log.Printf("База данных %s уже существует.", targetDBName)
 	}
 
-	targetConnStr := fmt.Sprintf("host=localhost port=5432 user=postgres password=123 dbname=%s sslmode=disable", targetDBName)
+	targetConnStr := fmt.Sprintf("host=db port=5432 user=postgres password=123 dbname=%s sslmode=disable", targetDBName)
 	Db, err = sql.Open("postgres", targetConnStr)
 	if err != nil {
 		log.Fatal("Ошибка подключения к целевой базе данных:", err)
