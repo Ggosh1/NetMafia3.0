@@ -305,13 +305,10 @@
 
 
     function handleServerMessage(message) {
-        //log(`Message from server: ${JSON.stringify(message)}`);
-
         if (message.time_remaining !== undefined) {
             document.getElementById("time-remaining").textContent = message.time_remaining;
         }
 
-        // Handle role assignment
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
@@ -320,10 +317,7 @@
             }
         }
 
-        // Handle phase updates
         if (message.phase) {
-            //log(`Game phase: ${message.phase}`);
-
             if (message.phase === "night") {
                 document.body.classList.add("night");
             } else if (message.phase === "day") {
@@ -331,13 +325,10 @@
             }
         }
 
-        // Handle game status updates
         if (message.players) {
-            console.log('update griddddddd')
             updatePlayerGrid(message.players);
         }
 
-        // Handle game winner
         if (message.winner) {
             log(`Game over! ${message.winner}`);
             alert(`Game over! ${message.winner}`);
@@ -347,17 +338,18 @@
         if (message.chat) {
             displayChatMessage(message.playerID, message.chat);
         }
-        if (message.targeted_screamer_player) {
-            log(`Your current scream target: ${message.targetedPlayer}`);
-        }
-        if (message.targeted_sun_flower_player){
-            log(`Your current flower target: ${message.targetedPlayer}`);
+
+        // Новая обработка для истории чата
+        if (message.type && message.type === "chatHistory" && message.history) {
+            // Очищаем лог, если нужно (опционально)
+            // document.getElementById("log").innerHTML = "";
+            message.history.forEach(msg => {
+                displayChatMessage(msg.playerID, msg.chat);
+            });
         }
 
         if (message.votes) {
-            // votes: { "player1": "player2", ... }
             currentVotes = message.votes;
-            // Перерисовываем сетку, чтобы у каждого было видно, за кого он голосует
             updatePlayerGrid(players);
         }
 
@@ -365,7 +357,6 @@
             updatePlayerGrid(message.players);
             return;
         }
-
     }
 
     function updatePlayerGrid(playerStatus) {

@@ -43,3 +43,10 @@ var game = Game{
 	// Изначальные роли (пример – впоследствии перезаписываются функцией generateRoles)
 	Roles: []string{"mafia", "detective", "villager", "villager"},
 }
+
+type ChatMessage struct {
+	PlayerID string `json:"playerID"`
+	Chat     string `json:"chat"`
+}
+
+var chatHistory []ChatMessage
