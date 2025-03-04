@@ -189,13 +189,10 @@ func processNightActions() {
 		}
 	}
 
-	voteThreshold := aliveWerewolves / 2
-	if aliveWerewolves%2 != 0 {
-		voteThreshold = aliveWerewolves/2 + 1
-	}
-
+	voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
+	// Определяем жертву
 	maxVotes := 0
-	var candidates []string
+	candidates := []string{}
 	for targetID, count := range werewolfVotes {
 		if count > maxVotes {
 			maxVotes = count
@@ -203,6 +200,24 @@ func processNightActions() {
 		} else if count == maxVotes {
 			candidates = append(candidates, targetID)
 		}
+	}
+	if len(candidates) == 1 && maxVotes >= voteThreshold {
+		targetID := candidates[0]
+		if target, ok := game.Players[targetID]; ok && target.IsAlive && targetID != doctorTarget {
+			// убиваем цель
+			if target.Role == "Крикун" && target.TargetedScreamerPlayer != "" {
+				// эффект Крикуна – раскрытие роли выбранного игрока
+				if scrTarget, ok2 := game.Players[target.TargetedScreamerPlayer]; ok2 {
+					broadcastChatMessage("[SERVER]",
+						fmt.Sprintf("Крикун погиб и раскрывает роль игрока %s: %s",
+							scrTarget.ID, scrTarget.Role))
+				}
+			}
+			target.IsAlive = false
+			log.Printf("[Night] Werewolves killed player %s", targetID)
+		}
+	} else {
+		log.Println("[Night] No one was killed by werewolves this night.")
 	}
 
 	log.Printf("[Night] Werewolf votes: %v, threshold=%d, maxVotes=%d, candidates=%v",
