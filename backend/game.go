@@ -361,6 +361,14 @@ func broadcastWinner(winner string) {
 	})
 
 	for _, player := range game.Players {
+		player.IsAlive = true
+		player.Hacked = false
+		player.TargetedSunFlowerPlayer = ""
+		player.TargetedScreamerPlayer = ""
+		player.VotedFor = ""
+		player.Action = ""
+		player.Aura = ""
+		player.Role = ""
 		if err := player.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
 			log.Printf("Failed to send winner message to player %s: %v", player.ID, err)
 		}
@@ -383,6 +391,8 @@ func processVotes() {
 			player.IsAlive = false
 			log.Printf("Player %s was killed by hacker", player.ID)
 		}
+
+		player.VotedFor = ""
 	}
 
 	voteThreshold := calculateVoteThreshold(alivePlayers)
