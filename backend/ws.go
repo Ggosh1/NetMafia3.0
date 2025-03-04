@@ -112,6 +112,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		log.Printf("Message from %s: %s", playerID, string(message))
+
 		processMessage(playerID, message)
 	}
 }
@@ -156,10 +157,9 @@ func processMessage(playerID string, message []byte) {
 		return
 	}
 
-	// Если действие "start_game", запускаем игру сразу (в отдельной горутине) и выходим
 	if msg.Action == "start_game" {
 		log.Printf("Player %s requested to start the game", playerID)
-		go startGame(nil, nil)
+		go startGame(playerID)
 		return
 	}
 
@@ -171,6 +171,7 @@ func processMessage(playerID string, message []byte) {
 	}
 
 	switch msg.Action {
+
 	case "vote":
 		// Голосуем только в дневной фазе и если игрок не взломан
 		if game.CurrentPhase == "day" && !player.Hacked {
@@ -180,54 +181,82 @@ func processMessage(playerID string, message []byte) {
 				game.Mutex.Unlock()
 				return
 			}
-			// Если игрок повторно голосует за того же кандидата, отменяем голос
-			if player.VotedFor == msg.Target {
+
+			var needSetVote bool = true
+			if player.VotedFor != "" && player.VotedFor == msg.Target {
+				log.Printf("Player %s attempted to vote for the same target twice. Vote ignored.", playerID)
+				needSetVote = false
+			}
+
+			if player.VotedFor != "" {
+				log.Printf("Удаление голоса игрока %s.", playerID)
 				game.Votes[player.VotedFor]--
 				if game.Votes[player.VotedFor] < 0 {
 					game.Votes[player.VotedFor] = 0
 				}
 				player.VotedFor = ""
-			} else {
-				// Если ранее был поставлен голос за другого игрока, отменяем его
-				if player.VotedFor != "" {
-					game.Votes[player.VotedFor]--
-					if game.Votes[player.VotedFor] < 0 {
-						game.Votes[player.VotedFor] = 0
-					}
-				}
-				// Регистрируем голос, если целевой игрок существует
-				if _, ok := game.Players[msg.Target]; ok {
-					player.VotedFor = msg.Target
-					game.Votes[msg.Target]++
-					log.Printf("Player %s voted for %s", playerID, msg.Target)
-				}
 			}
+
+			if _, ok := game.Players[msg.Target]; ok && needSetVote {
+				player.VotedFor = msg.Target
+				game.Votes[msg.Target]++
+				log.Printf("Player %s voted for %s", playerID, msg.Target)
+			}
+
+			//log.Printf("Итоговый голос игрока %s - %s", playerID, player.VotedFor)
+			broadcastGameStatus()
+
 		} else if game.CurrentPhase == "night" && !player.Hacked {
 			if msg.Target == playerID {
-				log.Printf("Player %s attempted to target themselves at night. Ignoring.", playerID)
-			} else if _, exists := game.Players[msg.Target]; exists {
-				player.Action = msg.Target
-				log.Printf("Player %s (werewolf/ability) targets %s at night", playerID, msg.Target)
+				log.Printf("Player %s attempted to target themselves at night. Action ignored.", playerID)
+				game.Mutex.Unlock()
+				return
 			}
-		}
 
-		game.Mutex.Unlock()
+			var needSetVote bool = true
+			// Если игрок уже выбрал эту же цель, игнорируем повторное действие
+			if player.VotedFor != "" && player.VotedFor == msg.Target {
+				log.Printf("Player %s attempted to target the same player twice at night. Action ignored.", playerID)
+				needSetVote = false
+			}
 
-	case "cancel_vote":
-		// Обработка отмены голоса в дневной фазе (если голос был поставлен)
-		if game.CurrentPhase == "day" && !player.Hacked {
-			// Обрабатываем отмену только если передан целевой ID совпадающий с текущим голосом
-			if player.VotedFor != "" && msg.Target == player.VotedFor {
-				game.Votes[player.VotedFor]--
-				if game.Votes[player.VotedFor] < 0 {
-					game.Votes[player.VotedFor] = 0
-				}
+			// Если уже было выбрано что-то ранее, удаляем предыдущий выбор
+			if player.Action != "" {
+				log.Printf("Removing previous night action for player %s.", playerID)
+				// Если ведется счет голосов/выборов ночью, можно его уменьшить
+				player.Action = ""
 				player.VotedFor = ""
 			}
-		} else if game.CurrentPhase == "night" {
-			player.Action = ""
+
+			// Если цель существует и новое действие нужно установить
+			if _, ok := game.Players[msg.Target]; ok && needSetVote {
+				player.Action = msg.Target
+				player.VotedFor = msg.Target
+				log.Printf("Player %s targeted %s at night.", playerID, msg.Target)
+			}
+
+			broadcastGameStatus()
+
+			broadcastGameStatus()
 		}
+
 		game.Mutex.Unlock()
+
+	/*case "cancel_vote":
+	// Обработка отмены голоса в дневной фазе (если голос был поставлен)
+	if game.CurrentPhase == "day" && !player.Hacked {
+		// Обрабатываем отмену только если передан целевой ID совпадающий с текущим голосом
+		if player.VotedFor != "" && msg.Target == player.VotedFor {
+			game.Votes[player.VotedFor]--
+			if game.Votes[player.VotedFor] < 0 {
+				game.Votes[player.VotedFor] = 0
+			}
+			player.VotedFor = ""
+		}
+	} else if game.CurrentPhase == "night" {
+		player.Action = ""
+	}
+	game.Mutex.Unlock()*/
 
 	case "chat":
 		// Сообщения в чат обрабатываем без блокировки, чтобы не держать мьютекс во время сетевых операций
@@ -251,6 +280,7 @@ func processMessage(playerID string, message []byte) {
 	default:
 		game.Mutex.Unlock()
 	}
+
 }
 
 func broadcastChatMessage(playerID, chatMessage string) {
@@ -302,6 +332,7 @@ func broadcastGameStatus() {
 			TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player,omitempty"`
 			TimeRemaining           int             `json:"time_remaining"`
 			Votes                   map[string]int  `json:"votes"`
+			PlayerVote              string          `json:"player_vote"`
 		}{
 			Phase: game.CurrentPhase,
 			Players: func() map[string]bool {
@@ -314,7 +345,10 @@ func broadcastGameStatus() {
 			Day:           game.DayNumber,
 			TimeRemaining: game.TimeRemaining,
 			Votes:         game.Votes,
+			PlayerVote:    player.VotedFor,
 		}
+
+		//log.Printf("Игрок %s голосует за %s", player.ID, player.VotedFor)
 
 		// Добавляем информацию о цели только для "Крикуна"
 		if player.Role == "Крикун" && player.TargetedScreamerPlayer != "" {
@@ -332,9 +366,15 @@ func broadcastGameStatus() {
 		}
 
 		// Отправка данных игроку
+		if player.Conn == nil {
+			log.Printf("Соединение для игрока %s не установлено", player.ID)
+			return
+		}
+
 		err = player.Conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
-			log.Printf("Failed to send game status to player %s: %v", player.ID, err)
+			log.Printf("Не удалось отправить статус игры игроку %s: %v", player.ID, err)
+			// Здесь можно добавить дополнительную логику обработки, если нужно
 		}
 	}
 }

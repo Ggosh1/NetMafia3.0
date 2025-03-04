@@ -269,6 +269,15 @@
 </div>
 
 <script>
+    {
+        const input = document.getElementById("chat-input");
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendChatMessage();
+            }
+        });
+    }
+
     // Добавляем обработчик beforeunload для корректного закрытия WebSocket
     window.addEventListener("beforeunload", function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -309,12 +318,24 @@
             document.getElementById("time-remaining").textContent = message.time_remaining;
         }
 
+        log("Новый выбранный пользователь: " + message.player_vote)
+        selectedPlayerID = message.player_vote;
+        //updatePlayerGrid(message.players);
+
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
             if (message.role === "Крикун" || message.role === "Дитя цветов") {
                 document.getElementById("screamer-controls").style.display = "block";
             }
+        }
+
+        if (message.team) {
+            log(`Роль выбранного игрока: ${message.team}`);
+        }
+
+        if (message.error) {
+            alert(`Ошибка: ${message.error}`);
         }
 
         if (message.phase) {
@@ -360,6 +381,8 @@
     }
 
     function updatePlayerGrid(playerStatus) {
+        //log("выбранный пользователь: " + selectedPlayerID);
+
         const playerGrid = document.getElementById("player-grid");
         playerGrid.innerHTML = ""; // Clear existing players
         const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
@@ -369,6 +392,7 @@
             const playerCard = document.createElement("div");
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
+
 
             if (selectedPlayerID === playerID && isAlive) {
                 playerCard.classList.add("selected");
@@ -397,8 +421,6 @@
             }
             playerGrid.appendChild(playerCard);
 
-
-
             // Update local players object
             players[playerID] = isAlive;
         });
@@ -413,7 +435,6 @@
             console.log("WebSocket is not connected");
         }
     }
-
 
     function log(message) {
         const logDiv = document.getElementById("log");
@@ -465,19 +486,21 @@
         }
 
         if (ws && ws.readyState === WebSocket.OPEN) {
-            if (selectedPlayerID === playerID) {
+            ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+
+            /*if (selectedPlayerID === playerID) {
                 // Если клик по тому же игроку, отменяем голос
                 ws.send(JSON.stringify({ action: "cancel_vote", vote: playerID }));
                 log(`Vote for ${playerID} cancelled`);
-                selectedPlayerID = null;
+                //selectedPlayerID = null;
             } else {
                 // Отправляем голос на сервер
                 ws.send(JSON.stringify({ action: "vote", vote: playerID }));
                 log(`Voted for ${playerID}`);
 
                 // Обновляем локальный выбор
-                selectedPlayerID = playerID;
-            }
+                //selectedPlayerID = playerID;
+            }*/
             updatePlayerGrid(players); // Обновить отображение
         } else {
             log("WebSocket is not connected.");

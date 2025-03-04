@@ -5,25 +5,49 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
+	//"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
-// startGame запускает игру, назначает роли и начинает фазу дня.
-func startGame(w http.ResponseWriter, r *http.Request) {
+// запускает игру, назначает роли и начинает фазу дня.
+func startGame(playerID string) {
+	//log.Println("Обработка запроса на запуск игры")
+
+	//log.Println("0тест")
+
 	game.Mutex.Lock()
 	game.Mutex.Unlock()
 
+	//log.Println("1тест")
+
 	if game.GameStarted {
-		http.Error(w, "Game already started", http.StatusBadRequest)
+		errorMessage, _ := json.Marshal(struct {
+			Error string `json:"error"`
+		}{
+			Error: "Game already started",
+		})
+		game.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
+		//http.Error(w, "Game already started", http.StatusBadRequest)
 		return
 	}
 
+	//log.Println("2тест")
+
 	if len(game.Players) < 4 {
-		http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
+		//log.Println("зашел сюда")
+		errorMessage, _ := json.Marshal(struct {
+			Error string `json:"error"`
+		}{
+			Error: "Not enough players to start the game",
+		})
+		game.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
+		//http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
 		return
 	}
+
+	//log.Println("3тест")
+
 	game.Roles = generateRoles(len(game.Players))
 	log.Println("Starting game...")
 	assignRoles()
@@ -144,6 +168,7 @@ func processNightActions() {
 			log.Println("#6")
 		}
 		player.Action = "" // Сбрасываем действия после обработки
+		player.VotedFor = ""
 	}
 
 	aliveWerewolves := 0
@@ -256,6 +281,7 @@ func processNightActions() {
 					Team: target.Role,
 				})
 				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+				log.Printf("сообщение игроку %s отправлено", id)
 			}
 		}
 		if game.Players[id].Role == "Провидец ауры" {
