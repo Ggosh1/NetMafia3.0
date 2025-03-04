@@ -5,25 +5,49 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
+	//"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
-// startGame запускает игру, назначает роли и начинает фазу дня.
-func startGame(w http.ResponseWriter, r *http.Request) {
+// запускает игру, назначает роли и начинает фазу дня.
+func startGame(playerID string) {
+	//log.Println("Обработка запроса на запуск игры")
+
+	//log.Println("0тест")
+
 	game.Mutex.Lock()
 	game.Mutex.Unlock()
 
+	//log.Println("1тест")
+
 	if game.GameStarted {
-		http.Error(w, "Game already started", http.StatusBadRequest)
+		errorMessage, _ := json.Marshal(struct {
+			Error string `json:"error"`
+		}{
+			Error: "Game already started",
+		})
+		game.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
+		//http.Error(w, "Game already started", http.StatusBadRequest)
 		return
 	}
 
+	//log.Println("2тест")
+
 	if len(game.Players) < 4 {
-		http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
+		//log.Println("зашел сюда")
+		errorMessage, _ := json.Marshal(struct {
+			Error string `json:"error"`
+		}{
+			Error: "Not enough players to start the game",
+		})
+		game.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
+		//http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
 		return
 	}
+
+	//log.Println("3тест")
+
 	game.Roles = generateRoles(len(game.Players))
 	log.Println("Starting game...")
 	assignRoles()
@@ -144,6 +168,7 @@ func processNightActions() {
 			log.Println("#6")
 		}
 		player.Action = "" // Сбрасываем действия после обработки
+		player.VotedFor = ""
 	}
 
 	aliveWerewolves := 0
@@ -189,13 +214,10 @@ func processNightActions() {
 		}
 	}
 
-	voteThreshold := aliveWerewolves / 2
-	if aliveWerewolves%2 != 0 {
-		voteThreshold = aliveWerewolves/2 + 1
-	}
-
+	voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
+	// Определяем жертву
 	maxVotes := 0
-	var candidates []string
+	candidates := []string{}
 	for targetID, count := range werewolfVotes {
 		if count > maxVotes {
 			maxVotes = count
@@ -203,6 +225,24 @@ func processNightActions() {
 		} else if count == maxVotes {
 			candidates = append(candidates, targetID)
 		}
+	}
+	if len(candidates) == 1 && maxVotes >= voteThreshold {
+		targetID := candidates[0]
+		if target, ok := game.Players[targetID]; ok && target.IsAlive && targetID != doctorTarget {
+			// убиваем цель
+			if target.Role == "Крикун" && target.TargetedScreamerPlayer != "" {
+				// эффект Крикуна – раскрытие роли выбранного игрока
+				if scrTarget, ok2 := game.Players[target.TargetedScreamerPlayer]; ok2 {
+					broadcastChatMessage("[SERVER]",
+						fmt.Sprintf("Крикун погиб и раскрывает роль игрока %s: %s",
+							scrTarget.ID, scrTarget.Role))
+				}
+			}
+			target.IsAlive = false
+			log.Printf("[Night] Werewolves killed player %s", targetID)
+		}
+	} else {
+		log.Println("[Night] No one was killed by werewolves this night.")
 	}
 
 	log.Printf("[Night] Werewolf votes: %v, threshold=%d, maxVotes=%d, candidates=%v",
@@ -241,6 +281,7 @@ func processNightActions() {
 					Team: target.Role,
 				})
 				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+				log.Printf("сообщение игроку %s отправлено", id)
 			}
 		}
 		if game.Players[id].Role == "Провидец ауры" {
@@ -320,6 +361,14 @@ func broadcastWinner(winner string) {
 	})
 
 	for _, player := range game.Players {
+		player.IsAlive = true
+		player.Hacked = false
+		player.TargetedSunFlowerPlayer = ""
+		player.TargetedScreamerPlayer = ""
+		player.VotedFor = ""
+		player.Action = ""
+		player.Aura = ""
+		player.Role = ""
 		if err := player.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
 			log.Printf("Failed to send winner message to player %s: %v", player.ID, err)
 		}
@@ -342,6 +391,8 @@ func processVotes() {
 			player.IsAlive = false
 			log.Printf("Player %s was killed by hacker", player.ID)
 		}
+
+		player.VotedFor = ""
 	}
 
 	voteThreshold := calculateVoteThreshold(alivePlayers)

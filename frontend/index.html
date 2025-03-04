@@ -270,6 +270,15 @@
 </div>
 
 <script>
+    {
+        const input = document.getElementById("chat-input");
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendChatMessage();
+            }
+        });
+    }
+
     // Добавляем обработчик beforeunload для корректного закрытия WebSocket
     window.addEventListener("beforeunload", function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -306,13 +315,14 @@
 
 
     function handleServerMessage(message) {
-        //log(`Message from server: ${JSON.stringify(message)}`);
-
         if (message.time_remaining !== undefined) {
             document.getElementById("time-remaining").textContent = message.time_remaining;
         }
 
-        // Handle role assignment
+        //log("Новый выбранный пользователь: " + message.player_vote)
+        selectedPlayerID = message.player_vote;
+        //updatePlayerGrid(message.players);
+
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
@@ -321,10 +331,15 @@
             }
         }
 
-        // Handle phase updates
-        if (message.phase) {
-            //log(`Game phase: ${message.phase}`);
+        if (message.team) {
+            log(`Роль выбранного игрока: ${message.team}`);
+        }
 
+        if (message.error) {
+            alert(`Ошибка: ${message.error}`);
+        }
+
+        if (message.phase) {
             if (message.phase === "night") {
                 document.body.classList.add("night");
             } else if (message.phase === "day") {
@@ -332,13 +347,10 @@
             }
         }
 
-        // Handle game status updates
         if (message.players) {
-            console.log('update griddddddd')
             updatePlayerGrid(message.players);
         }
 
-        // Handle game winner
         if (message.winner) {
             log(`Game over! ${message.winner}`);
             alert(`Game over! ${message.winner}`);
@@ -348,17 +360,18 @@
         if (message.chat) {
             displayChatMessage(message.playerID, message.chat);
         }
-        if (message.targeted_screamer_player) {
-            log(`Your current scream target: ${message.targetedPlayer}`);
-        }
-        if (message.targeted_sun_flower_player){
-            log(`Your current flower target: ${message.targetedPlayer}`);
+
+        // Новая обработка для истории чата
+        if (message.type && message.type === "chatHistory" && message.history) {
+            // Очищаем лог, если нужно (опционально)
+            // document.getElementById("log").innerHTML = "";
+            message.history.forEach(msg => {
+                displayChatMessage(msg.playerID, msg.chat);
+            });
         }
 
         if (message.votes) {
-            // votes: { "player1": "player2", ... }
             currentVotes = message.votes;
-            // Перерисовываем сетку, чтобы у каждого было видно, за кого он голосует
             updatePlayerGrid(players);
         }
 
@@ -366,10 +379,11 @@
             updatePlayerGrid(message.players);
             return;
         }
-
     }
 
     function updatePlayerGrid(playerStatus) {
+        //log("выбранный пользователь: " + selectedPlayerID);
+
         const playerGrid = document.getElementById("player-grid");
         playerGrid.innerHTML = ""; // Clear existing players
         const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
@@ -379,6 +393,7 @@
             const playerCard = document.createElement("div");
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
+
 
             if (selectedPlayerID === playerID && isAlive) {
                 playerCard.classList.add("selected");
@@ -407,8 +422,6 @@
             }
             playerGrid.appendChild(playerCard);
 
-
-
             // Update local players object
             players[playerID] = isAlive;
         });
@@ -423,7 +436,6 @@
             console.log("WebSocket is not connected");
         }
     }
-
 
     function log(message) {
         const logDiv = document.getElementById("log");
@@ -475,19 +487,21 @@
         }
 
         if (ws && ws.readyState === WebSocket.OPEN) {
-            if (selectedPlayerID === playerID) {
+            ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+
+            /*if (selectedPlayerID === playerID) {
                 // Если клик по тому же игроку, отменяем голос
                 ws.send(JSON.stringify({ action: "cancel_vote", vote: playerID }));
                 log(`Vote for ${playerID} cancelled`);
-                selectedPlayerID = null;
+                //selectedPlayerID = null;
             } else {
                 // Отправляем голос на сервер
                 ws.send(JSON.stringify({ action: "vote", vote: playerID }));
                 log(`Voted for ${playerID}`);
 
                 // Обновляем локальный выбор
-                selectedPlayerID = playerID;
-            }
+                //selectedPlayerID = playerID;
+            }*/
             updatePlayerGrid(players); // Обновить отображение
         } else {
             log("WebSocket is not connected.");

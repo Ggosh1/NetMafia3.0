@@ -11,6 +11,7 @@ import (
 var Db *sql.DB
 
 func InitDB() {
+	//TODO: ПОМЕНЯТЬ host=db ДЛЯ РАБОТЫ В КОНТЕЙНЕРЕ
 	sysConnStr := "host=localhost port=5432 user=postgres password=123 dbname=postgres sslmode=disable"
 	sysDB, err := sql.Open("postgres", sysConnStr)
 	if err != nil {
@@ -42,6 +43,7 @@ func InitDB() {
 		log.Printf("База данных %s уже существует.", targetDBName)
 	}
 
+	//TODO: ПОМЕНЯТЬ host=db ДЛЯ РАБОТЫ В КОНТЕЙНЕРЕ
 	targetConnStr := fmt.Sprintf("host=localhost port=5432 user=postgres password=123 dbname=%s sslmode=disable", targetDBName)
 	Db, err = sql.Open("postgres", targetConnStr)
 	if err != nil {

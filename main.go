@@ -5,7 +5,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"NetMafia3.0/backend"
+	"NetMafia3/backend"
 	_ "github.com/lib/pq"
 )
 

@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    container_name: mafia_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: postgres
+      
+  mafia:
+    build: .
+    container_name: mafia_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
