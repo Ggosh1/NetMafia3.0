@@ -99,8 +99,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"message": "Пользователь успешно зарегистрирован",
+		"status":     "success",
+		"message":    "Пользователь успешно зарегистрирован. Добро пожаловать в ",
+		"addMessage": " Mafia Game",
 	})
 }
 
@@ -150,8 +151,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"message": "Вход выполнен успешно",
+		"status":     "success",
+		"message":    "Вход выполнен успешно ",
+		"addMessage": " Mafia game",
 	})
 }
 
@@ -166,6 +168,7 @@ func ServeProfile(w http.ResponseWriter, r *http.Request) {
 
 func ServeWelcome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./frontend/welcome.html")
+
 }
 
 func ServeGame(w http.ResponseWriter, r *http.Request) {
