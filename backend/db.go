@@ -53,11 +53,20 @@ func InitDB() {
 		log.Fatal("Ошибка подключения к целевой базе данных:", err)
 	}
 
+	addSessionIDColumnQuery := `
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS session_id VARCHAR(255);
+	`
+	_, err = Db.Exec(addSessionIDColumnQuery)
+	if err != nil {
+		log.Fatalf("Ошибка добавления столбца session_id: %v", err)
+	}
+
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		username TEXT UNIQUE NOT NULL,
-		password TEXT NOT NULL
+		password TEXT NOT NULL,
+		session_id VARCHAR(255)
 	);
 	`
 	if _, err := Db.Exec(createTableQuery); err != nil {

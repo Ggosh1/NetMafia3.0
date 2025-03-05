@@ -1,10 +1,14 @@
 package backend
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +84,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sessionID, err1 := GenerateSessionID(16)
+	if err1 != nil {
+		http.Error(w, "Ошибка генерации Session ID", http.StatusInternalServerError)
+		return
+	}
+
 	var exists bool
 	err := Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)", req.Username).Scan(&exists)
 	if err != nil {
@@ -91,17 +101,34 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = Db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", req.Username, req.Password)
+	_, err = Db.Exec("INSERT INTO users (username, password, session_id) VALUES ($1, $2, $3)", req.Username, req.Password, sessionID)
 	if err != nil {
-		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		fmt.Println(err)
+		http.Error(w, "Ошибка базы записи sessionID", http.StatusInternalServerError)
 		return
 	}
+
+	// Создание куки
+	cookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Domain:   "localhost", // Укажите свой домен (или удалите, чтобы куки работала только для текущего домена)
+		MaxAge:   3600,
+		Secure:   false, // В production используйте HTTPS
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	// Установка куки
+	http.SetCookie(w, cookie)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":     "success",
 		"message":    "Пользователь успешно зарегистрирован. Добро пожаловать в ",
 		"addMessage": " Mafia Game",
+		"token":      sessionID,
 	})
 }
 
@@ -149,15 +176,64 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный пароль"})
 		return
 	}
+	sessionID, err := GenerateSessionID(16)
+	if err != nil {
+		http.Error(w, "Ошибка генерации Session ID", http.StatusInternalServerError)
+		return
+	}
+
+	// Обновляем session_id в базе данных
+	_, err = Db.Exec("UPDATE users SET session_id=$1 WHERE username=$2", sessionID, req.Username)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ошибка обновления сессии в базе данных"})
+		return
+	}
+
+	// Создание куки
+	cookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Domain:   "localhost", // Укажите свой домен (или удалите, чтобы куки работала только для текущего домена)
+		MaxAge:   3600,
+		Secure:   false, // В production используйте HTTPS
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	// Установка куки
+	http.SetCookie(w, cookie)
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":     "success",
 		"message":    "Вход выполнен успешно ",
 		"addMessage": " Mafia game",
+		"token":      sessionID,
 	})
 }
 
+func GenerateSessionID(length int) (string, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
 func ServeProfile(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie("session_id")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		} else {
+			fmt.Println("Ошибка при получении куки:", err)
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+	}
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "ID не указан", http.StatusBadRequest)
@@ -167,11 +243,49 @@ func ServeProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServeWelcome(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./frontend/welcome.html")
+	cookie, err := r.Cookie("session_id")
 
+	if err != nil {
+		if err == http.ErrNoCookie {
+			fmt.Println("куки не найден")
+			http.ServeFile(w, r, "./frontend/welcome.html")
+			return
+		} else {
+			fmt.Println("Ошибка при получении куки:", err)
+			http.ServeFile(w, r, "./frontend/welcome.html")
+			return
+		}
+	}
+
+	fmt.Println("Куки session_id:", cookie)
+
+	redirectURL := "/profile"
+
+	u, err := url.Parse(redirectURL)
+	if err != nil {
+		http.Error(w, "Ошибка формирования URL", http.StatusInternalServerError)
+		fmt.Println("Ошибка парсинга URL:", err)
+		return
+	}
+	query := u.Query()
+	query.Add("id", cookie.Value)
+	u.RawQuery = query.Encode()
+	http.Redirect(w, r, u.String(), http.StatusFound)
+	fmt.Println("редирект")
 }
 
 func ServeGame(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie("session_id")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		} else {
+			fmt.Println("Ошибка при получении куки:", err)
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+	}
 	http.ServeFile(w, r, "./frontend/index.html")
 }
 

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"NetMafia3/backend"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 
-	"NetMafia3/backend"
 	_ "github.com/lib/pq"
 )
 

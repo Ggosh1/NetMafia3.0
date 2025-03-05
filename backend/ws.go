@@ -19,6 +19,17 @@ var upgrader = websocket.Upgrader{
 var disconnectedPlayers = make(map[string]bool)
 
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie("session_id")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		} else {
+			fmt.Println("Ошибка при получении куки:", err)
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade error:", err)

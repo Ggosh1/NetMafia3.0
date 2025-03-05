@@ -90,7 +90,7 @@ window.addEventListener("load", ()=>{
                 span.textContent = data.addMessage
                 popup.querySelector(".popup__text").append(span)
                 popupButton.addEventListener("click", ()=>{
-                    window.location.href = '/profile?id=' + encodeURIComponent(username);
+                    window.location.href = '/profile?id=' + encodeURIComponent(data.token);
                 })
             })
             .catch(error => {
@@ -138,7 +138,7 @@ window.addEventListener("load", ()=>{
                 span.textContent = data.addMessage
                 popup.querySelector(".popup__text").append(span)
                 popupButton.addEventListener("click", ()=>{
-                    window.location.href = '/profile?id=' + encodeURIComponent(username);
+                    window.location.href = '/profile?id=' + encodeURIComponent(data.token);
                 })
             })
             .catch(error => {
