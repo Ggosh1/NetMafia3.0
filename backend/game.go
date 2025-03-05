@@ -65,7 +65,7 @@ func assignRoles() {
 			player.Role == "Малыш оборотень" || player.Role == "Волчий страж" {
 			player.Aura = "bad"
 		} else if player.Role == "Шут" || player.Role == "Хакер" ||
-			player.Role == "Тюремщик" || player.Role == "Линчеватель" {
+			player.Role == "Тюремщик" || player.Role == "Медиум" {
 			player.Aura = "unknown"
 		} else {
 			player.Aura = "good"
@@ -137,7 +137,7 @@ func startDayPhase() {
 	log.Println("Day phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-	startPhaseTimer(30, endDayPhase)
+	startPhaseTimer(10, endDayPhase)
 }
 
 func startNightPhase() {
@@ -146,7 +146,7 @@ func startNightPhase() {
 	log.Println("Night phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-	startPhaseTimer(30, func() {
+	startPhaseTimer(10, func() {
 		log.Println("Night phase timer ended.")
 		processNightActions()
 		endNightPhase()
@@ -159,6 +159,7 @@ func processNightActions() {
 	// Собираем действия игроков
 	werewolfVotes := make(map[string]int)
 	nightActions := make(map[string]string)
+	mediumTarget := ""
 	game.Mutex.Lock()
 	log.Println("#5")
 	for _, player := range game.Players {
@@ -169,6 +170,15 @@ func processNightActions() {
 		}
 		player.Action = "" // Сбрасываем действия после обработки
 		player.VotedFor = ""
+		if player.Role == "Медиум" {
+			log.Println("МЕДИУМ111")
+			if player.TargetedMediumPlayer != "" {
+				log.Println("МЕДИУМ222")
+				mediumTarget = player.TargetedMediumPlayer
+				log.Println(mediumTarget)
+				player.TargetedMediumPlayer = ""
+			}
+		}
 	}
 
 	aliveWerewolves := 0
@@ -214,7 +224,7 @@ func processNightActions() {
 		}
 	}
 
-	voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
+	voteThreshold := aliveWerewolves / 2
 	// Определяем жертву
 	maxVotes := 0
 	candidates := []string{}
@@ -296,6 +306,17 @@ func processNightActions() {
 			}
 		}
 	}
+	if mediumTarget != "" {
+		log.Printf("MEDIUM TARGET %s", mediumTarget)
+		targetPlayer, ok := game.Players[mediumTarget]
+		ok = ok
+		if !targetPlayer.IsAlive {
+			targetPlayer.IsAlive = true
+			broadcastChatMessage("[SERVER]", fmt.Sprintf("Игрок %s был возрожден", targetPlayer.ID))
+		}
+		mediumTarget = ""
+	}
+
 }
 
 func endDayPhase() {

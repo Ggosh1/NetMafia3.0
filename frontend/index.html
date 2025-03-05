@@ -325,7 +325,7 @@
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
-            if (message.role === "Крикун" || message.role === "Дитя цветов") {
+            if (message.role === "Крикун" || message.role === "Дитя цветов" || message.role == "Медиум") {
                 document.getElementById("screamer-controls").style.display = "block";
             }
         }
@@ -358,6 +358,10 @@
 
         if (message.chat) {
             displayChatMessage(message.playerID, message.chat);
+        }
+
+        if (message.message) {
+            log(message.message)
         }
 
         // Новая обработка для истории чата
@@ -508,7 +512,7 @@
     }
     function selectTarget() {
         const targetID = prompt("Enter the player ID you want to target:");
-        if (targetID && players[targetID]) {
+        if (targetID) {
             ws.send(JSON.stringify({ action: "scream_target", vote: targetID }));
             log(`Target selected: ${targetID}`);
         } else {

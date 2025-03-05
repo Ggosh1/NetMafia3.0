@@ -16,7 +16,11 @@ type Player struct {
 	Aura                    string          `json:"aura"`
 	TargetedScreamerPlayer  string          `json:"targeted_screamer_player"`
 	TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player"`
+	TargetedMediumPlayer    string          `json:"targeted_medium_player"`
 	Hacked                  bool            `json:"hacked"`
+	CheckingWolfSeerUsed    bool            `json:"checking_wolf_seer_used"`
+	ResurrectionUsed        bool            `json:"resurrection_used"` // Для Медиума
+	CheckingMediumUsed      bool            `json:"checking_medium_used"`
 }
 
 type Game struct {

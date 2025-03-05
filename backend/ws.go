@@ -173,6 +173,7 @@ func processMessage(playerID string, message []byte) {
 	switch msg.Action {
 
 	case "vote":
+		log.Printf("VOTE")
 		// Голосуем только в дневной фазе и если игрок не взломан
 		if game.CurrentPhase == "day" && !player.Hacked {
 			// Запрещаем голосовать за самого себя
@@ -266,6 +267,7 @@ func processMessage(playerID string, message []byte) {
 		}
 
 	case "scream_target":
+		log.Printf("SCREAM TARGET")
 		// Обработка для ролей "Крикун" и "Дитя цветов"
 		if player.Role == "Крикун" {
 			player.TargetedScreamerPlayer = msg.Target
@@ -273,7 +275,39 @@ func processMessage(playerID string, message []byte) {
 		} else if player.Role == "Дитя цветов" {
 			player.TargetedSunFlowerPlayer = msg.Target
 			log.Printf("FlowerChild selected target: %s", msg.Target)
+		} else if player.Role == "Медиум" {
+			log.Printf("МЕДИУМ")
+			targetPlayer, ok := game.Players[msg.Target]
+			if ok && !targetPlayer.IsAlive {
+				if !player.CheckingMediumUsed {
+					log.Printf("НОРМ ЦЕЛЬ МЕДИУМ")
+					player.TargetedMediumPlayer = msg.Target
+					Message, _ := json.Marshal(struct {
+						Error string `json:"message"`
+					}{
+						Error: msg.Target + " будет возрожден",
+					})
+					player.Conn.WriteMessage(websocket.TextMessage, Message)
+					player.CheckingMediumUsed = true
+					log.Printf("Medium selected target: %s", msg.Target)
+				} else {
+					Message, _ := json.Marshal(struct {
+						Error string `json:"message"`
+					}{
+						Error: "Вы уже возродили игрока",
+					})
+					player.Conn.WriteMessage(websocket.TextMessage, Message)
+				}
+			} else {
+				log.Printf("НЕНОРМ ЦЕЛЬ МЕДИУМ")
+				Message, _ := json.Marshal(struct {
+					Error string `json:"message"`
+				}{
+					Error: "Этого игрока нельзя возродить"})
+				player.Conn.WriteMessage(websocket.TextMessage, Message)
+			}
 		}
+
 		game.Mutex.Unlock()
 		broadcastGameStatus()
 
