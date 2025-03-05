@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var PHASE_TIME int = 10
+
 // запускает игру, назначает роли и начинает фазу дня.
 func startGame(playerID string) {
 	//log.Println("Обработка запроса на запуск игры")
@@ -137,7 +139,7 @@ func startDayPhase() {
 	log.Println("Day phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-	startPhaseTimer(30, endDayPhase)
+	startPhaseTimer(PHASE_TIME, endDayPhase)
 }
 
 func startNightPhase() {
@@ -146,7 +148,7 @@ func startNightPhase() {
 	log.Println("Night phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-	startPhaseTimer(30, func() {
+	startPhaseTimer(PHASE_TIME, func() {
 		log.Println("Night phase timer ended.")
 		processNightActions()
 		endNightPhase()
@@ -162,6 +164,7 @@ func processNightActions() {
 	game.Mutex.Lock()
 	log.Println("#5")
 	for _, player := range game.Players {
+		player.CheckingWolfSeerUsed = false
 		if player.Action != "" && player.IsAlive {
 			nightActions[player.ID] = player.Action
 			log.Println("####!!!", player.ID, player.Action)
@@ -214,7 +217,7 @@ func processNightActions() {
 		}
 	}
 
-	voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
+	voteThreshold := aliveWerewolves / 2 // Требуется малая половина оборотней
 	// Определяем жертву
 	maxVotes := 0
 	candidates := []string{}

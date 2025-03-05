@@ -17,6 +17,7 @@ type Player struct {
 	TargetedScreamerPlayer  string          `json:"targeted_screamer_player"`
 	TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player"`
 	Hacked                  bool            `json:"hacked"`
+	CheckingWolfSeerUsed    bool            `json:"checking_wolf_seer_used"`
 }
 
 type Game struct {

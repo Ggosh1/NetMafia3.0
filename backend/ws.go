@@ -206,7 +206,7 @@ func processMessage(playerID string, message []byte) {
 			//log.Printf("Итоговый голос игрока %s - %s", playerID, player.VotedFor)
 			broadcastGameStatus()
 
-		} else if game.CurrentPhase == "night" && !player.Hacked {
+		} else if game.CurrentPhase == "night" {
 			if msg.Target == playerID {
 				log.Printf("Player %s attempted to target themselves at night. Action ignored.", playerID)
 				game.Mutex.Unlock()
@@ -230,9 +230,34 @@ func processMessage(playerID string, message []byte) {
 
 			// Если цель существует и новое действие нужно установить
 			if _, ok := game.Players[msg.Target]; ok && needSetVote {
-				player.Action = msg.Target
-				player.VotedFor = msg.Target
-				log.Printf("Player %s targeted %s at night.", playerID, msg.Target)
+				if player.Role == "Волчий провидец" {
+					if target, exists := game.Players[msg.Target]; exists {
+						if target.Aura == "bad" {
+							log.Printf("Волчий провидец %s выбрал игрока %s, который является волком. Действие отклонено.", playerID, msg.Target)
+						} else {
+							if !player.CheckingWolfSeerUsed {
+								log.Printf("Волчий провидец %s проверил игрока %s, роль: %s", playerID, target.ID, target.Role)
+								message := fmt.Sprintf("Роль игрока %s: %s", target.ID, target.Role)
+								teamCheckMessage, _ := json.Marshal(struct {
+									Team string `json:"team"`
+								}{
+									Team: message,
+								})
+								player.Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+								// Разрешаем только одну проверку за ночь:
+								player.Action = ""
+								player.CheckingWolfSeerUsed = true
+							}
+						}
+						game.Mutex.Unlock()
+						broadcastGameStatus()
+						return
+					}
+				} else {
+					player.Action = msg.Target
+					player.VotedFor = msg.Target
+					log.Printf("Player %s targeted %s at night.", playerID, msg.Target)
+				}
 			}
 
 			broadcastGameStatus()
@@ -276,6 +301,22 @@ func processMessage(playerID string, message []byte) {
 		}
 		game.Mutex.Unlock()
 		broadcastGameStatus()
+	case "convert_to_werewolf":
+		if player.Role == "Волчий провидец" {
+			player.Role = "Обычный оборотень"
+			player.Aura = "bad"
+			log.Printf("Player %s converted to обычный оборотень", playerID)
+			confirmation, _ := json.Marshal(struct {
+				PlayerID string `json:"playerID"`
+				Chat     string `json:"chat"`
+			}{
+				PlayerID: "[SERVER]",
+				Chat:     "Вы стали обычным оборотнем",
+			})
+			player.Conn.WriteMessage(websocket.TextMessage, confirmation)
+		}
+		game.Mutex.Unlock()
+		return
 
 	default:
 		game.Mutex.Unlock()
