@@ -4,14 +4,15 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Mafia Game</title>
-    <!-- Подключаем Tailwind CSS -->
+    <link rel="stylesheet" href="./css/reset.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Sigmar&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключаем React, ReactDOM и Babel -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Сброс базовых отступов */
         * {
             margin: 0;
             padding: 0;
@@ -326,7 +327,7 @@
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
-            if (message.role === "Крикун" || message.role === "Дитя цветов") {
+            if (message.role === "Крикун" || message.role === "Дитя цветов" || message.role == "Медиум") {
                 document.getElementById("screamer-controls").style.display = "block";
             }
             if (message.role === "Волчий провидец") {
@@ -362,6 +363,10 @@
 
         if (message.chat) {
             displayChatMessage(message.playerID, message.chat);
+        }
+
+        if (message.message) {
+            log(message.message)
         }
 
         // Новая обработка для истории чата
@@ -512,7 +517,7 @@
     }
     function selectTarget() {
         const targetID = prompt("Enter the player ID you want to target:");
-        if (targetID && players[targetID]) {
+        if (targetID) {
             ws.send(JSON.stringify({ action: "scream_target", vote: targetID }));
             log(`Target selected: ${targetID}`);
         } else {
