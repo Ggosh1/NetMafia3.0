@@ -351,6 +351,84 @@ func processMessage(playerID string, message []byte) {
 		}
 		game.Mutex.Unlock()
 		return
+	case "jail_select":
+		log.Printf("JAILER")
+		// Действие для выбора цели тюремщиком в дневную фазу
+		if player.Role == "Тюремщик" && game.CurrentPhase == "day" {
+			if msg.Target == player.ID {
+				log.Printf("Тюремщик не может выбрать себя.")
+			} else if _, ok := game.Players[msg.Target]; ok {
+				player.JailSelected = msg.Target
+				log.Printf("Тюремщик %s выбрал игрока %s для ареста", player.ID, msg.Target)
+				confirmation := map[string]string{
+					"type":    "jail_select_confirm",
+					"message": "Игрок " + msg.Target + " выбран для ареста.",
+				}
+				player.Conn.WriteJSON(confirmation)
+			}
+		}
+		game.Mutex.Unlock()
+		//broadcastGameStatus()
+		return
+
+	case "jail_kill":
+		// Действие для убийства арестованного игрока ночью (один раз за игру)
+		if player.Role == "Тюремщик" && game.CurrentPhase == "night" {
+			if player.JailSelected == "" {
+				log.Printf("Нет выбранного игрока для убийства.")
+			} else if player.JailKillUsed {
+				log.Printf("Способность убийства уже использована.")
+			} else {
+				// Фиксируем намерение убийства – сохраняем его в поле Action
+				player.Action = "jail_kill"
+				log.Printf("Тюремщик %s решил убить игрока %s", player.ID, player.JailSelected)
+				confirmation := map[string]string{
+					"type":    "jail_kill_confirm",
+					"message": "Решение об убийстве игрока " + player.JailSelected + " зафиксировано.",
+				}
+				player.Conn.WriteJSON(confirmation)
+			}
+		}
+		game.Mutex.Unlock()
+		//broadcastGameStatus()
+		return
+
+	case "jail_chat":
+		// Личный чат между тюремщиком и арестованным игроком
+		// msg.Message содержит текст сообщения.
+		var jailer *Player
+		var arrestedID string
+		// Ищем тюремщика, который уже выбрал цель
+		for _, p := range game.Players {
+			if p.Role == "Тюремщик" && p.JailSelected != "" {
+				jailer = p
+				arrestedID = p.JailSelected
+				break
+			}
+		}
+		if jailer == nil {
+			log.Println("Нет активного тюремщика с выбранным игроком для чата.")
+			return
+		}
+		// Разрешаем чат только для тюремщика и арестованного
+		if player.ID != jailer.ID && player.ID != arrestedID {
+			log.Println("Пользователь не имеет доступа к чату тюрьмы.")
+			return
+		}
+		chatMsg := map[string]string{
+			"type":    "jail_chat",
+			"from":    player.ID,
+			"message": msg.Message,
+		}
+		if jailer.Conn != nil {
+			jailer.Conn.WriteJSON(chatMsg)
+		}
+		if arrested, ok := game.Players[arrestedID]; ok && arrested.Conn != nil {
+			arrested.Conn.WriteJSON(chatMsg)
+		}
+		game.Mutex.Unlock()
+		//broadcastGameStatus()
+		return
 
 	default:
 		game.Mutex.Unlock()

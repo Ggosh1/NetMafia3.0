@@ -228,6 +228,36 @@
         #exitBtn:hover {
             background: rgba(255, 0, 0, 1);
         }
+
+        #jail-kill-btn {
+            background-color: #007bff; /* исходный цвет кнопки */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #jail-kill-btn:disabled {
+            background-color: gray;  /* цвет кнопки, когда она неактивна */
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #jail-select-btn {
+            background-color: #007bff; /* исходный цвет кнопки */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #jail-select-btn:disabled {
+            background-color: gray;  /* цвет кнопки, когда она неактивна */
+            color: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -259,6 +289,18 @@
                     <button onclick="selectTarget()">Choose Target</button>
                     <button onclick="clearTarget()">Clear Target</button>
                 </div>
+
+                <div id="jailer-controls" style="display: none; margin-top: 10px; border: 1px solid #007bff; padding: 10px; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <button id="jail-select-btn" onclick="selectJailTarget()">Выбрать игрока для ареста</button>
+                        <button id="jail-kill-btn" onclick="jailKill()">Убить арестованного</button>
+                    </div>
+                    <div id="jail-chat-container" style="display: none; margin-top: 10px;">
+                        <input type="text" id="jail-chat-input" placeholder="Напишите сообщение для личного чата..." style="width: 80%; padding: 5px;"/>
+                        <button onclick="sendJailChat()">Отправить</button>
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -292,8 +334,13 @@
 
     const players = {}; // Store player info dynamically
     let currentVotes = {};
+
+    let isJailer = false; // Флаг, определяющий, является ли игрок тюремщиком
+    let jailPartner = null; // ID партнёра по личному чату (арестованный игрок или тюремщик)
+
     const params = new URLSearchParams(window.location.search);
     const playerId = params.get("id");
+
     if (!playerId) {
         alert("ID игрока не указан. Пожалуйста, заходите через страницу входа.");
     }
@@ -333,6 +380,10 @@
             if (message.role === "Волчий провидец") {
                 document.getElementById("convert-btn").style.display = "block";
             }
+            if (message.role === "Тюремщик") {
+                isJailer = true;
+                document.getElementById("jailer-controls").style.display = "block";
+            }
         }
 
         if (message.team) {
@@ -346,8 +397,23 @@
         if (message.phase) {
             if (message.phase === "night") {
                 document.body.classList.add("night");
+                const btn = document.getElementById("jail-kill-btn");
+                const btn2 = document.getElementById("jail-select-btn");
+
+                // Делаем кнопку неактивной, чтобы предотвратить повторные клики
+                btn.disabled = false;
+                btn2.disabled = true;
+
             } else if (message.phase === "day") {
                 document.body.classList.remove("night");
+                const btn = document.getElementById("jail-kill-btn");
+                const btn2 = document.getElementById("jail-select-btn");
+
+
+                // Делаем кнопку неактивной, чтобы предотвратить повторные клики
+                btn.disabled = true;
+                btn2.disabled = false;
+
             }
         }
 
@@ -386,6 +452,28 @@
         if (message.type && message.type === "playerList") {
             updatePlayerGrid(message.players);
             return;
+        }
+
+        if (message.type === "jail_info") {
+            // Сообщение о начале личного чата между тюремщиком и арестованным
+            jailPartner = message.partner;
+            // Отображаем блок личного чата
+            document.getElementById("jail-chat-container").style.display = "block";
+            // Если игрок является тюремщиком и его способность убийства ещё не использована, можно отобразить кнопку убийства
+            if (isJailer) {
+                document.getElementById("jail-kill-btn").style.display = "inline-block";
+            }
+        }
+
+        if (message.type === "jail_chat") {
+            // Личный чат: отображаем сообщение
+            const from = message.from;
+            log(`(Личный чат) ${from}: ${message.message}`);
+        }
+
+        if (message.type === "jail_kill_confirm" || message.type === "jail_kill_result") {
+            // Можно скрыть блок личного чата, если цель была убита
+            document.getElementById("jail-chat-container").style.display = "none";
         }
     }
 
@@ -562,6 +650,42 @@
             log("Запрос на конверсию отправлен.");
         } else {
             log("WebSocket is not connected.");
+        }
+    }
+
+    // Функция для выбора цели ареста
+    function selectJailTarget() {
+        const targetId = prompt("Введите ID игрока для ареста:");
+        if (targetId && targetId !== playerId) {
+            // Отправляем сообщение для выбора цели ареста
+            const msg = { action: "jail_select", vote: targetId };
+            ws.send(JSON.stringify(msg));
+            log(`Вы выбрали игрока ${targetId} для ареста.`);
+        } else {
+            alert("Неверный ID или вы не можете выбрать себя.");
+        }
+    }
+
+    // Функция для отправки решения об убийстве арестованного
+    function jailKill() {
+        if (confirm("Вы уверены, что хотите убить арестованного игрока? (Эта способность доступна только 1 раз)")) {
+            const msg = { action: "jail_kill" };
+            ws.send(JSON.stringify(msg));
+            log("Решение об убийстве отправлено серверу.");
+            // После отправки можно скрыть кнопку убийства, чтобы предотвратить повторное использование
+            document.getElementById("jail-kill-btn").style.display = "none";
+        }
+    }
+
+    // Функция для отправки сообщений в личный чат тюремщика
+    function sendJailChat() {
+        const input = document.getElementById("jail-chat-input");
+        const message = input.value.trim();
+        if (message) {
+            const msg = { action: "jail_chat", message: message };
+            ws.send(JSON.stringify(msg));
+            log(`(Личный чат) Вы: ${message}`);
+            input.value = "";
         }
     }
 

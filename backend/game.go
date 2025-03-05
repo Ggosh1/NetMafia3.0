@@ -139,11 +139,8 @@ func startDayPhase() {
 	log.Println("Day phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-<<<<<<< HEAD
-	startPhaseTimer(PHASE_TIME, endDayPhase)
-=======
+
 	startPhaseTimer(10, endDayPhase)
->>>>>>> 5e214d8dd2c55158c89e776e2d8437177e4e8c13
 }
 
 func startNightPhase() {
@@ -152,11 +149,7 @@ func startNightPhase() {
 	log.Println("Night phase started.")
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
-<<<<<<< HEAD
-	startPhaseTimer(PHASE_TIME, func() {
-=======
 	startPhaseTimer(10, func() {
->>>>>>> 5e214d8dd2c55158c89e776e2d8437177e4e8c13
 		log.Println("Night phase timer ended.")
 		processNightActions()
 		endNightPhase()
@@ -165,6 +158,12 @@ func startNightPhase() {
 
 func processNightActions() {
 	log.Println("Processing night actions...")
+	// Блокируем ночные действия у арестованных игроков
+	for _, player := range game.Players {
+		if player.Arrested {
+			player.Action = ""
+		}
+	}
 
 	// Собираем действия игроков
 	werewolfVotes := make(map[string]int)
@@ -179,8 +178,7 @@ func processNightActions() {
 			log.Println("####!!!", player.ID, player.Action)
 			log.Println("#6")
 		}
-		player.Action = "" // Сбрасываем действия после обработки
-		player.VotedFor = ""
+
 		if player.Role == "Медиум" {
 			log.Println("МЕДИУМ111")
 			if player.TargetedMediumPlayer != "" {
@@ -190,6 +188,29 @@ func processNightActions() {
 				player.TargetedMediumPlayer = ""
 			}
 		}
+		if player.Role == "Тюремщик" && player.JailSelected != "" {
+			// Получаем цель тюремщика
+			log.Println("JAILER 111")
+			target, exists := game.Players[player.JailSelected]
+			if exists && target.IsAlive {
+				log.Println("JAILER 222", player.Action, player.JailKillUsed)
+
+				// Отмечаем цель как арестованную
+				target.Arrested = true
+
+				// Если тюремщик решил убить арестованного игрока (action == "jail_kill")
+				if player.Action == "jail_kill" && !player.JailKillUsed {
+					log.Println("JAILER 333")
+					target.IsAlive = false
+					player.JailKillUsed = true
+				}
+			}
+			// Сбрасываем выбор и действие тюремщика для следующей ночи
+			player.JailSelected = ""
+			player.Action = ""
+		}
+		player.Action = "" // Сбрасываем действия после обработки
+		player.VotedFor = ""
 	}
 
 	aliveWerewolves := 0
@@ -235,11 +256,7 @@ func processNightActions() {
 		}
 	}
 
-<<<<<<< HEAD
-	voteThreshold := aliveWerewolves / 2 // Требуется малая половина оборотней
-=======
 	voteThreshold := aliveWerewolves / 2
->>>>>>> 5e214d8dd2c55158c89e776e2d8437177e4e8c13
 	// Определяем жертву
 	maxVotes := 0
 	candidates := []string{}

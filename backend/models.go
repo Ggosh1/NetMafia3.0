@@ -19,11 +19,11 @@ type Player struct {
 	TargetedMediumPlayer    string          `json:"targeted_medium_player"`
 	Hacked                  bool            `json:"hacked"`
 	CheckingWolfSeerUsed    bool            `json:"checking_wolf_seer_used"`
-<<<<<<< HEAD
-=======
 	ResurrectionUsed        bool            `json:"resurrection_used"` // Для Медиума
 	CheckingMediumUsed      bool            `json:"checking_medium_used"`
->>>>>>> 5e214d8dd2c55158c89e776e2d8437177e4e8c13
+	JailSelected            string          `json:"jail_selected"`  // ID выбранного игрока для ареста
+	JailKillUsed            bool            `json:"jail_kill_used"` // Флаг, что способность убийства уже использована
+	Arrested                bool            `json:"arrested"`       // Флаг, что игрок арестован (его способности заблокированы)
 }
 
 type Game struct {
