@@ -3,6 +3,7 @@ package backend
 import (
 	"database/sql"
 	"encoding/json"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 )
@@ -91,7 +92,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = Db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", req.Username, req.Password)
+	// Хэширование пароля с использованием bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Ошибка шифрования пароля", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = Db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", req.Username, string(hashedPassword))
 	if err != nil {
 		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
 		return
@@ -144,7 +152,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Password != storedPassword {
+	// Сравниваем хэшированный пароль из базы с введённым паролем
+	if err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password)); err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный пароль"})
 		return
