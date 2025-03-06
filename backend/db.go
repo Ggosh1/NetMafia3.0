@@ -63,4 +63,17 @@ func InitDB() {
 	if _, err := Db.Exec(createTableQuery); err != nil {
 		log.Fatal("Ошибка создания таблицы:", err)
 	}
+	// db.go (дополните после создания таблицы users)
+	createFriendsTableQuery := `
+	CREATE TABLE IF NOT EXISTS friends (
+	    id SERIAL PRIMARY KEY,
+	    user_username TEXT NOT NULL,
+	    friend_username TEXT NOT NULL,
+	    UNIQUE(user_username, friend_username)
+	);
+`
+	if _, err := Db.Exec(createFriendsTableQuery); err != nil {
+		log.Fatal("Ошибка создания таблицы друзей:", err)
+	}
+
 }

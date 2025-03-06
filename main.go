@@ -24,6 +24,9 @@ func main() {
 	http.HandleFunc("/status", backend.GameStatus)
 	http.HandleFunc("/joinroom", backend.JoinRoomHandler)
 	http.HandleFunc("/leaveroom", backend.LeaveRoomHandler)
+	http.HandleFunc("/friends", backend.GetFriendsHandler)
+	http.HandleFunc("/addfriend", backend.AddFriendHandler)
+	http.HandleFunc("/removefriend", backend.RemoveFriendHandler)
 	// Раздача статических файлов (css, js, картинки)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./frontend/static"))))
 

@@ -196,3 +196,131 @@ func GameStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(status)
 }
+
+// Получение списка друзей по username (передаётся через параметр id)
+func GetFriendsHandler(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("id")
+	if username == "" {
+		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
+		return
+	}
+	rows, err := Db.Query("SELECT friend_username FROM friends WHERE user_username = $1", username)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	friends := []string{}
+	for rows.Next() {
+		var friend string
+		rows.Scan(&friend)
+		friends = append(friends, friend)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"friends": friends,
+	})
+}
+
+// Добавление друга (ожидается POST с JSON: { "user": "username", "friend": "friend_username" })
+func AddFriendHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("ADDFRIEND")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+	type AddFriendRequest struct {
+		User   string `json:"user"`
+		Friend string `json:"friend"`
+	}
+	var req AddFriendRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.User == "" || req.Friend == "" {
+		http.Error(w, "Пользователь или друг не указан", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что friend существует в таблице users
+	var exists bool
+	err := Db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)", req.Friend).Scan(&exists)
+	if err != nil {
+		http.Error(w, "Ошибка при проверке пользователя в БД", http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		http.Error(w, "Пользователь с логином "+req.Friend+" не существует", http.StatusBadRequest)
+		return
+	}
+
+	var alreadyAdded bool
+	err = Db.QueryRow("SELECT EXISTS(SELECT 1 FROM friends WHERE user_username=$1 AND friend_username=$2)", req.User, req.Friend).Scan(&alreadyAdded)
+	if err != nil {
+		http.Error(w, "Ошибка при проверке списка друзей", http.StatusInternalServerError)
+		return
+	}
+	if alreadyAdded {
+		http.Error(w, "Пользователь уже добавлен в друзья", http.StatusBadRequest)
+		return
+	}
+
+	_, err = Db.Exec("INSERT INTO friends (user_username, friend_username) VALUES ($1, $2), ($2, $1) ON CONFLICT DO NOTHING", req.User, req.Friend)
+
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Друг успешно добавлен",
+	})
+}
+
+// Удаление друга (ожидается POST с JSON: { "user": "username", "friend": "friend_username" })
+func RemoveFriendHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+	type RemoveFriendRequest struct {
+		User   string `json:"user"`
+		Friend string `json:"friend"`
+	}
+	var req RemoveFriendRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+	if req.User == "" || req.Friend == "" {
+		http.Error(w, "Пользователь или друг не указан", http.StatusBadRequest)
+		return
+	}
+
+	var alreadyAdded bool
+	err := Db.QueryRow("SELECT EXISTS(SELECT 1 FROM friends WHERE user_username=$1 AND friend_username=$2)", req.User, req.Friend).Scan(&alreadyAdded)
+	if err != nil {
+		http.Error(w, "Ошибка при проверке списка друзей", http.StatusInternalServerError)
+		return
+	}
+	if !alreadyAdded {
+		http.Error(w, "Пользователя нет в друзьях", http.StatusBadRequest)
+		return
+	}
+
+	_, err = Db.Exec("DELETE FROM friends WHERE (user_username = $1 AND friend_username = $2) OR (user_username = $2 AND friend_username = $1)", req.User, req.Friend)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Друг успешно удалён",
+	})
+}
