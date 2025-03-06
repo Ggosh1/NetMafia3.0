@@ -249,16 +249,13 @@
             <button onclick="sendChatMessage()">Send</button>
         </div>
 
-        <!-- Нижний блок с кнопками (Connect, Start, Screamer controls) -->
+        <!-- Нижний блок с кнопками (Start Game, ChoosePlayer, Clear Target) -->
         <div class="bottom-controls">
             <div id="controls">
                 <button onclick="startGame()">Start Game</button>
-                <div id="screamer-controls" style="display: none;">
-                    <button onclick="selectTarget()">Choose Target</button>
-                    <button onclick="clearTarget()">Clear Target</button>
-                </div>
+                <button onclick="choosePlayer()">ChoosePlayer</button>
+                <button onclick="clearTarget()">Clear Target</button>
             </div>
-
         </div>
     </div>
 
@@ -288,7 +285,7 @@
     let timerInterval;
     let selectedPlayerID = null; // Хранит ID выбранного игрока
 
-    const players = {}; // Store player info dynamically
+    const players = {}; // Хранение информации об игроках
     let currentVotes = {};
     const params = new URLSearchParams(window.location.search);
     const playerId = params.get("id");
@@ -312,22 +309,16 @@
         ws.onclose = () => { log("Disconnected from server"); };
     }
 
-
     function handleServerMessage(message) {
         if (message.time_remaining !== undefined) {
             document.getElementById("time-remaining").textContent = message.time_remaining;
         }
 
-        //log("Новый выбранный пользователь: " + message.player_vote)
         selectedPlayerID = message.player_vote;
-        //updatePlayerGrid(message.players);
 
         if (message.role) {
             log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
-            if (message.role === "Крикун" || message.role === "Дитя цветов") {
-                document.getElementById("screamer-controls").style.display = "block";
-            }
         }
 
         if (message.team) {
@@ -360,10 +351,8 @@
             displayChatMessage(message.playerID, message.chat);
         }
 
-        // Новая обработка для истории чата
+        // Обработка истории чата
         if (message.type && message.type === "chatHistory" && message.history) {
-            // Очищаем лог, если нужно (опционально)
-            // document.getElementById("log").innerHTML = "";
             message.history.forEach(msg => {
                 displayChatMessage(msg.playerID, msg.chat);
             });
@@ -381,24 +370,21 @@
     }
 
     function updatePlayerGrid(playerStatus) {
-        //log("выбранный пользователь: " + selectedPlayerID);
-
         const playerGrid = document.getElementById("player-grid");
-        playerGrid.innerHTML = ""; // Clear existing players
+        playerGrid.innerHTML = ""; // Очищаем список игроков
         const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
 
         Object.entries(playerStatus).forEach(([playerID, isAlive]) => {
-            if (playerID === "targetedScreamPlayer" || playerID === "targetedSunFlowermPlayer") return; // Пропускаем мета-данные
+            if (playerID === "targetedScreamPlayer" || playerID === "targetedSunFlowermPlayer") return;
             const playerCard = document.createElement("div");
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
-
 
             if (selectedPlayerID === playerID && isAlive) {
                 playerCard.classList.add("selected");
             }
             if (playerID === targetedPlayerID && isAlive) {
-                playerCard.classList.add("targeted"); // Класс для выделения цели
+                playerCard.classList.add("targeted");
             }
 
             playerCard.innerHTML = `
@@ -409,10 +395,9 @@
 
             const votedFor = currentVotes[playerID];
             if (votedFor) {
-                // Добавим элемент с табличкой
                 const voteSign = document.createElement("div");
                 voteSign.classList.add("vote-sign");
-                voteSign.textContent = "⚔️ " + votedFor + " ⚔️"; // Можно вывести ID или имя
+                voteSign.textContent = "⚔️ " + votedFor + " ⚔️";
                 playerCard.appendChild(voteSign);
             }
 
@@ -420,8 +405,6 @@
                 playerCard.onclick = () => handleVoteClick(playerID, isAlive);
             }
             playerGrid.appendChild(playerCard);
-
-            // Update local players object
             players[playerID] = isAlive;
         });
     }
@@ -441,7 +424,6 @@
         const p = document.createElement("p");
         p.textContent = message;
         logDiv.appendChild(p);
-        // Прокручиваем вниз к новому сообщению
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
@@ -451,6 +433,31 @@
             log("Game start request sent to the server.");
         } else {
             log("WebSocket is not connected");
+        }
+    }
+
+    // Функция для выбора игрока
+    function chooseTarget() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const playerID = prompt("Enter the player ID to choose:");
+            if (playerID) {
+                ws.send(JSON.stringify({ action: "choose_player", player: playerID }));
+                log(`Chosen player: ${playerID}`);
+            } else {
+                log("No player ID entered.");
+            }
+        } else {
+            log("WebSocket is not connected.");
+        }
+    }
+
+    // Функция для очистки цели
+    function clearTarget() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "scream_target", vote: "" }));
+            log("Target cleared.");
+        } else {
+            log("WebSocket is not connected.");
         }
     }
 
@@ -465,7 +472,7 @@
 
         if (message && ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ action: "chat", message }));
-            input.value = ""; // Очистить поле ввода после отправки
+            input.value = "";
         } else if (!ws || ws.readyState !== WebSocket.OPEN) {
             log("WebSocket is not connected.");
         }
@@ -476,7 +483,7 @@
         const p = document.createElement("p");
         p.innerHTML = `<strong>${playerID}:</strong> ${chatMessage}`;
         logDiv.appendChild(p);
-        logDiv.scrollTop = logDiv.scrollHeight; // Прокрутка вниз
+        logDiv.scrollTop = logDiv.scrollHeight;
     }
 
     function handleVoteClick(playerID, isAlive) {
@@ -487,25 +494,12 @@
 
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ action: "vote", vote: playerID }));
-
-            /*if (selectedPlayerID === playerID) {
-                // Если клик по тому же игроку, отменяем голос
-                ws.send(JSON.stringify({ action: "cancel_vote", vote: playerID }));
-                log(`Vote for ${playerID} cancelled`);
-                //selectedPlayerID = null;
-            } else {
-                // Отправляем голос на сервер
-                ws.send(JSON.stringify({ action: "vote", vote: playerID }));
-                log(`Voted for ${playerID}`);
-
-                // Обновляем локальный выбор
-                //selectedPlayerID = playerID;
-            }*/
-            updatePlayerGrid(players); // Обновить отображение
+            updatePlayerGrid(players);
         } else {
             log("WebSocket is not connected.");
         }
     }
+
     function selectTarget() {
         const targetID = prompt("Enter the player ID you want to target:");
         if (targetID && players[targetID]) {
@@ -516,11 +510,7 @@
         }
     }
 
-    function clearTarget() {
-        ws.send(JSON.stringify({ action: "scream_target", vote: "" }));
-        log("Target cleared.");
-    }
-
+    // handleExit остался без изменений
     function handleExit() {
         const params = new URLSearchParams(window.location.search);
         const username = params.get("id");
@@ -546,7 +536,6 @@
                 });
         }
     }
-
 </script>
 </body>
 </html>

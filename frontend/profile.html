@@ -68,9 +68,88 @@
         const params = new URLSearchParams(window.location.search);
         const username = params.get("id") || "Player";
 
+        function handleCreateRoom() {
+            const roomId = prompt("Введите id комнаты:");
+            if (roomId !== null && roomId.trim() !== "") {
+                fetch('/createroom', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ roomId: roomId.trim() })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            // Если сервер вернул ошибку, пробуем извлечь сообщение об ошибке из тела ответа
+                            return response.json().then(errData => {
+                                throw new Error(errData.error || `Ошибка: ${response.status} ${response.statusText}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Предположим, что сервер возвращает объект с полями roomId и, возможно, players.
+                        let message = "Комната создана";
+                        if (data.roomId) {
+                            message += `: ${data.roomId}`;
+                        }
+                        if (data.players !== undefined) {
+                            message += `\nКоличество игроков: ${data.players}`;
+                        }
+                        alert(message);
+                    })
+                    .catch(error => {
+                        alert("Ошибка при создании комнаты: " + error.message);
+                    });
+            }
+        }
         // Обработчик клика по кнопке "Играть"
+        function handleJoinRoomByID() {
+            // Получаем идентификатор комнаты (roomId)
+            const roomId = prompt("Введите ID комнаты для входа:");
+            if (!roomId || roomId.trim() === "") {
+                alert("Некорректный roomId");
+                return;
+            }
+
+            // Формируем URL с query-параметром id (playerId)
+            const url = `/joinroombyid?id=${encodeURIComponent(username.trim())}`;
+
+            // Тело запроса (JSON), где указываем roomId
+            const bodyData = {
+                roomId: roomId.trim()
+            };
+
+            // Отправляем POST-запрос
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            })
+                .then(response => {
+                    // Если сервер вернул ошибку, пробуем извлечь сообщение об ошибке
+                    if (!response.ok) {
+                        return response.json().then(errData => {
+                            throw new Error(errData.error || `Ошибка: ${response.status} ${response.statusText}`);
+                        });
+                    }
+                    // Иначе парсим JSON
+                    return response.json();
+                })
+                .then(data => {
+                    alert("Получены данные комнаты:", data);
+                    // Перенаправляем на страницу игры с roomId и id игрока
+                    window.location.href = '/game?id=' + encodeURIComponent(username) + '&roomId=' + encodeURIComponent(data.roomId);
+                })
+                .catch(error => {
+                    alert("Ошибка при добавлении в комнату: " + error.message);
+                });
+        }
+
         function handleJoinRoom(e) {
-            e.preventDefault();
+            //e.preventDefault();
             console.log("Попытка присоединиться к комнате для игрока:", username);
             // Отправляем GET-запрос на /joinroom с параметром id
             fetch('/joinroom?id=' + encodeURIComponent(username))
@@ -107,11 +186,24 @@
                 <main className="flex flex-1">
                     {/* Левая панель с навигационными кнопками */}
                     <nav className="w-1/4 bg-white p-4 flex flex-col space-y-4">
-                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition" onClick={handleJoinRoom}>Играть</button>
-                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Инвентарь</button>
-                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Магазин</button>
-                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Клан</button>
-                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Роли</button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition" onClick={handleJoinRoomByID}>
+                            Присоединиться к комнате
+                        </button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition" onClick={handleCreateRoom}>
+                            Создать комнату
+                        </button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            Инвентарь
+                        </button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            Магазин
+                        </button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            Клан
+                        </button>
+                        <button className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            Роли
+                        </button>
                     </nav>
                     {/* Правая панель с информацией о пользователе */}
                     <section className="flex-1 bg-gray-100 p-4 relative">

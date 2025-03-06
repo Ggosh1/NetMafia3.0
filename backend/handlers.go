@@ -1,11 +1,23 @@
 package backend
 
 import (
+	"NetMafia3/backend/GameFiles"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
+
+var roomManager = GameFiles.NewRoomManager()
+
+func writeJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("Ошибка кодирования JSON: %v", err)
+	}
+}
 
 func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	playerID := r.URL.Query().Get("id")
@@ -15,7 +27,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game.Mutex.Lock()
-	player, exists := game.Players[playerID]
+	/*player, exists := game.Players[playerID]
 	if !exists {
 		player = &Player{
 			ID:      playerID,
@@ -23,15 +35,113 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.Players[playerID] = player
 		log.Printf("Создан новый игрок %s через joinRoomHandler", playerID)
-	}
+	}*/
 	game.Mutex.Unlock()
 
-	room := joinRoom(player)
+	/*room := joinRoom(player)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"roomId":  room.ID,
 		"players": len(room.Players),
-	})
+	})*/
+}
+
+type CreateRoomRequest struct {
+	RoomID string `json:"roomId"`
+}
+
+func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Попытка подключиться к комнате")
+
+	if r.Method != http.MethodPost {
+		writeJSONResponse(w, map[string]string{"error": "Метод не разрешён"}, http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем playerID из query-параметров
+	playerID := r.URL.Query().Get("id")
+	if playerID == "" {
+		writeJSONResponse(w, map[string]string{"error": "ID игрока не указан"}, http.StatusBadRequest)
+		return
+	}
+
+	// Структура для парсинга тела запроса (roomId будем брать отсюда)
+	type JoinRoomRequest struct {
+		RoomID string `json:"roomId"`
+	}
+
+	var req JoinRoomRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONResponse(w, map[string]string{"error": "Некорректное тело запроса"}, http.StatusBadRequest)
+		return
+	}
+	if req.RoomID == "" {
+		writeJSONResponse(w, map[string]string{"error": "Не указан roomId"}, http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Принят запрос на добавление игрока %s в комнату %s", playerID, req.RoomID)
+
+	// Если у вас есть какой-то общий мьютекс для синхронизации, используйте его:
+	game.Mutex.Lock()
+	defer game.Mutex.Unlock()
+
+	// Добавляем игрока в комнату
+	log.Printf("Пытаемся добавить игрока %s в комнату %s", playerID, req.RoomID)
+
+	if err := roomManager.AddPlayerToRoom(req.RoomID, playerID); err != nil {
+		log.Printf("Ошибка при добавлении игрока %s в комнату %s: %v", playerID, req.RoomID, err)
+		writeJSONResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Вроде добавили игрока %s в комнату %s", playerID, req.RoomID)
+
+	// Успешное добавление
+	writeJSONResponse(w, map[string]interface{}{
+		"status":  "ok",
+		"message": fmt.Sprintf("Игрок %s добавлен в комнату %s", playerID, req.RoomID),
+		"roomId":  req.RoomID,
+	}, http.StatusOK)
+}
+
+func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Попытка создать комнату")
+
+	if r.Method != http.MethodPost {
+		writeJSONResponse(w, map[string]string{"error": "Метод не разрешён"}, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CreateRoomRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONResponse(w, map[string]string{"error": "Некорректное тело запроса"}, http.StatusBadRequest)
+		return
+	}
+
+	if req.RoomID == "" {
+		writeJSONResponse(w, map[string]string{"error": "ID комнаты не указан"}, http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Принят запрос на создание комнаты %s", req.RoomID)
+
+	game.Mutex.Lock()
+	room, err := roomManager.CreateRoom(req.RoomID)
+	game.Mutex.Unlock()
+
+	if err != nil {
+		log.Printf("Ошибка при создании комнаты %s - %s", req.RoomID, err)
+		writeJSONResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("ID созданной комнаты %s", room.ID)
+
+	writeJSONResponse(w, map[string]interface{}{
+		"roomId": room.ID,
+		// "players": len(room.Players), // Можно добавить дополнительные данные при необходимости
+	}, http.StatusOK)
 }
 
 func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +207,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	roomManager.CreatePlayer(req.Username)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
@@ -148,6 +260,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный пароль"})
 		return
 	}
+
+	roomManager.CreatePlayer(req.Username)
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",

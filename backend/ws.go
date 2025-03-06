@@ -1,5 +1,6 @@
 package backend
 
+/*
 import (
 	"encoding/json"
 	"fmt"
@@ -158,7 +159,7 @@ func processMessage(playerID string, message []byte) {
 	}
 
 	if msg.Action == "start_game" {
-		log.Printf("Player %s requested to start the game", playerID)
+		log.Printf("Player %s requested to start the GameFiles", playerID)
 		go startGame(playerID)
 		return
 	}
@@ -244,21 +245,21 @@ func processMessage(playerID string, message []byte) {
 
 	/*case "cancel_vote":
 	// Обработка отмены голоса в дневной фазе (если голос был поставлен)
-	if game.CurrentPhase == "day" && !player.Hacked {
+	if GameFiles.CurrentPhase == "day" && !player.Hacked {
 		// Обрабатываем отмену только если передан целевой ID совпадающий с текущим голосом
 		if player.VotedFor != "" && msg.Target == player.VotedFor {
-			game.Votes[player.VotedFor]--
-			if game.Votes[player.VotedFor] < 0 {
-				game.Votes[player.VotedFor] = 0
+			GameFiles.Votes[player.VotedFor]--
+			if GameFiles.Votes[player.VotedFor] < 0 {
+				GameFiles.Votes[player.VotedFor] = 0
 			}
 			player.VotedFor = ""
 		}
-	} else if game.CurrentPhase == "night" {
+	} else if GameFiles.CurrentPhase == "night" {
 		player.Action = ""
 	}
-	game.Mutex.Unlock()*/
+	GameFiles.Mutex.Unlock()*/
 
-	case "chat":
+/*	case "chat":
 		// Сообщения в чат обрабатываем без блокировки, чтобы не держать мьютекс во время сетевых операций
 		game.Mutex.Unlock()
 		if !player.Hacked {
@@ -361,7 +362,7 @@ func broadcastGameStatus() {
 		// Сериализация в JSON
 		data, err := json.Marshal(status)
 		if err != nil {
-			log.Printf("Failed to marshal game status for player %s: %v", player.ID, err)
+			log.Printf("Failed to marshal GameFiles status for player %s: %v", player.ID, err)
 			continue
 		}
 
@@ -378,3 +379,4 @@ func broadcastGameStatus() {
 		}
 	}
 }
+*/

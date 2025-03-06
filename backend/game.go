@@ -2,7 +2,6 @@ package backend
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math/rand"
 	//"net/http"
@@ -10,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// запускает игру, назначает роли и начинает фазу дня.
+// Запускает игру, назначает роли и начинает фазу дня.
 func startGame(playerID string) {
 	//log.Println("Обработка запроса на запуск игры")
 
@@ -39,21 +38,21 @@ func startGame(playerID string) {
 		errorMessage, _ := json.Marshal(struct {
 			Error string `json:"error"`
 		}{
-			Error: "Not enough players to start the game",
+			Error: "Not enough players to start the GameFiles",
 		})
 		game.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
-		//http.Error(w, "Not enough players to start the game", http.StatusBadRequest)
+		//http.Error(w, "Not enough players to start the GameFiles", http.StatusBadRequest)
 		return
 	}
 
 	//log.Println("3тест")
 
 	game.Roles = generateRoles(len(game.Players))
-	log.Println("Starting game...")
+	log.Println("Starting GameFiles...")
 	assignRoles()
 	game.GameStarted = true
 	game.DayNumber = 1
-	startDayPhase()
+	//startDayPhase()
 }
 
 func assignRoles() {
@@ -130,7 +129,7 @@ func broadcastRoles() {
 	}
 }
 
-func startDayPhase() {
+/*func startDayPhase() {
 	game.Mutex.Lock()
 	game.CurrentPhase = "day"
 	game.Votes = make(map[string]int)
@@ -138,312 +137,313 @@ func startDayPhase() {
 	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
 	game.Mutex.Unlock()
 	startPhaseTimer(30, endDayPhase)
-}
+}*/
 
-func startNightPhase() {
-	game.Mutex.Lock()
-	game.CurrentPhase = "night"
-	log.Println("Night phase started.")
-	broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
-	game.Mutex.Unlock()
-	startPhaseTimer(30, func() {
-		log.Println("Night phase timer ended.")
-		processNightActions()
-		endNightPhase()
-	})
-}
-
-func processNightActions() {
-	log.Println("Processing night actions...")
-
-	// Собираем действия игроков
-	werewolfVotes := make(map[string]int)
-	nightActions := make(map[string]string)
-	game.Mutex.Lock()
-	log.Println("#5")
-	for _, player := range game.Players {
-		if player.Action != "" && player.IsAlive {
-			nightActions[player.ID] = player.Action
-			log.Println("####!!!", player.ID, player.Action)
-			log.Println("#6")
-		}
-		player.Action = "" // Сбрасываем действия после обработки
-		player.VotedFor = ""
+/*
+	func startNightPhase() {
+		game.Mutex.Lock()
+		game.CurrentPhase = "night"
+		log.Println("Night phase started.")
+		broadcastGameStatus() // Рассылаем обновление о фазе всем клиентам
+		game.Mutex.Unlock()
+		startPhaseTimer(30, func() {
+			log.Println("Night phase timer ended.")
+			processNightActions()
+			endNightPhase()
+		})
 	}
 
-	aliveWerewolves := 0
-	for _, player := range game.Players {
-		if player.IsAlive && player.Aura == "bad" {
-			aliveWerewolves++
-		}
-	}
-	doctorTarget := ""
-	hackerTarget := ""
-	game.Mutex.Unlock()
-	log.Println("#7")
-	// Обработка действий
-	for id, targetID := range nightActions {
-		p := game.Players[id]
-		log.Println("####id-targetid", id, targetID)
-		if p != nil && p.IsAlive && p.Aura == "bad" {
-			werewolfVotes[targetID]++
-			log.Println("####", targetID, werewolfVotes[targetID])
-		}
-		if p != nil && p.IsAlive && p.Role == "Доктор" {
-			doctorTarget = targetID
-			log.Println("####doctorTarget", doctorTarget)
-		}
-		if p != nil && p.IsAlive && p.Role == "Хакер" {
-			hackerTarget = targetID
-			log.Printf("Hacker targeted %s", hackerTarget)
-		}
-	}
+	func processNightActions() {
+		log.Println("Processing night actions...")
 
-	if hackerTarget != "" {
-		if target, exists := game.Players[hackerTarget]; exists {
-			target.Hacked = true
-			log.Printf("Player %s has been hacked and will lose voting/chat rights", target.ID)
-			message, _ := json.Marshal(struct {
-				PlayerID string `json:"playerID"`
-				Chat     string `json:"chat"`
-			}{
-				PlayerID: "[SERVER]",
-				Chat:     "Вы были взломаны! Вы не можете голосовать и писать в чат. Вы погибните в конце дня.",
-			})
-			target.Conn.WriteMessage(websocket.TextMessage, message)
-		}
-	}
-
-	voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
-	// Определяем жертву
-	maxVotes := 0
-	candidates := []string{}
-	for targetID, count := range werewolfVotes {
-		if count > maxVotes {
-			maxVotes = count
-			candidates = []string{targetID}
-		} else if count == maxVotes {
-			candidates = append(candidates, targetID)
-		}
-	}
-	if len(candidates) == 1 && maxVotes >= voteThreshold {
-		targetID := candidates[0]
-		if target, ok := game.Players[targetID]; ok && target.IsAlive && targetID != doctorTarget {
-			// убиваем цель
-			if target.Role == "Крикун" && target.TargetedScreamerPlayer != "" {
-				// эффект Крикуна – раскрытие роли выбранного игрока
-				if scrTarget, ok2 := game.Players[target.TargetedScreamerPlayer]; ok2 {
-					broadcastChatMessage("[SERVER]",
-						fmt.Sprintf("Крикун погиб и раскрывает роль игрока %s: %s",
-							scrTarget.ID, scrTarget.Role))
-				}
+		// Собираем действия игроков
+		werewolfVotes := make(map[string]int)
+		nightActions := make(map[string]string)
+		game.Mutex.Lock()
+		log.Println("#5")
+		for _, player := range game.Players {
+			if player.Action != "" && player.IsAlive {
+				nightActions[player.ID] = player.Action
+				log.Println("####!!!", player.ID, player.Action)
+				log.Println("#6")
 			}
-			target.IsAlive = false
-			log.Printf("[Night] Werewolves killed player %s", targetID)
+			player.Action = "" // Сбрасываем действия после обработки
+			player.VotedFor = ""
 		}
-	} else {
-		log.Println("[Night] No one was killed by werewolves this night.")
-	}
 
-	log.Printf("[Night] Werewolf votes: %v, threshold=%d, maxVotes=%d, candidates=%v",
-		werewolfVotes, voteThreshold, maxVotes, candidates,
-	)
+		aliveWerewolves := 0
+		for _, player := range game.Players {
+			if player.IsAlive && player.Aura == "bad" {
+				aliveWerewolves++
+			}
+		}
+		doctorTarget := ""
+		hackerTarget := ""
+		game.Mutex.Unlock()
+		log.Println("#7")
+		// Обработка действий
+		for id, targetID := range nightActions {
+			p := game.Players[id]
+			log.Println("####id-targetid", id, targetID)
+			if p != nil && p.IsAlive && p.Aura == "bad" {
+				werewolfVotes[targetID]++
+				log.Println("####", targetID, werewolfVotes[targetID])
+			}
+			if p != nil && p.IsAlive && p.Role == "Доктор" {
+				doctorTarget = targetID
+				log.Println("####doctorTarget", doctorTarget)
+			}
+			if p != nil && p.IsAlive && p.Role == "Хакер" {
+				hackerTarget = targetID
+				log.Printf("Hacker targeted %s", hackerTarget)
+			}
+		}
 
-	if len(candidates) == 1 && maxVotes >= voteThreshold {
-		targetID := candidates[0]
-		targetPlayer, ok := game.Players[targetID]
-		if ok && targetPlayer.IsAlive && targetID != doctorTarget {
-			if targetPlayer.Role == "Крикун" {
-				log.Println("##Крикун1")
-				if targetPlayer.TargetedScreamerPlayer != "" {
-					targetPlayer := game.Players[targetPlayer.TargetedScreamerPlayer]
-					if targetPlayer != nil {
-						log.Println("##Крикун2")
-						broadcastChatMessage("[SERVER]", fmt.Sprintf("Крикун раскрыл роль игрока %s - %s", targetPlayer.ID, targetPlayer.Role))
+		if hackerTarget != "" {
+			if target, exists := game.Players[hackerTarget]; exists {
+				target.Hacked = true
+				log.Printf("Player %s has been hacked and will lose voting/chat rights", target.ID)
+				message, _ := json.Marshal(struct {
+					PlayerID string `json:"playerID"`
+					Chat     string `json:"chat"`
+				}{
+					PlayerID: "[SERVER]",
+					Chat:     "Вы были взломаны! Вы не можете голосовать и писать в чат. Вы погибните в конце дня.",
+				})
+				target.Conn.WriteMessage(websocket.TextMessage, message)
+			}
+		}
+
+		voteThreshold := aliveWerewolves/2 + 1 // Требуется большинство оборотней
+		// Определяем жертву
+		maxVotes := 0
+		candidates := []string{}
+		for targetID, count := range werewolfVotes {
+			if count > maxVotes {
+				maxVotes = count
+				candidates = []string{targetID}
+			} else if count == maxVotes {
+				candidates = append(candidates, targetID)
+			}
+		}
+		if len(candidates) == 1 && maxVotes >= voteThreshold {
+			targetID := candidates[0]
+			if target, ok := game.Players[targetID]; ok && target.IsAlive && targetID != doctorTarget {
+				// убиваем цель
+				if target.Role == "Крикун" && target.TargetedScreamerPlayer != "" {
+					// эффект Крикуна – раскрытие роли выбранного игрока
+					if scrTarget, ok2 := game.Players[target.TargetedScreamerPlayer]; ok2 {
+						broadcastChatMessage("[SERVER]",
+							fmt.Sprintf("Крикун погиб и раскрывает роль игрока %s: %s",
+								scrTarget.ID, scrTarget.Role))
 					}
 				}
+				target.IsAlive = false
+				log.Printf("[Night] Werewolves killed player %s", targetID)
 			}
-			targetPlayer.IsAlive = false
-			log.Printf("[Night] Werewolves killed player %s", targetID)
-		}
-	} else {
-		log.Println("[Night] No one was killed by werewolves this night.")
-	}
-
-	// Действия Провидца и Провидца ауры
-	for id, action := range nightActions {
-		if game.Players[id].Role == "Провидец" {
-			if target, exists := game.Players[action]; exists {
-				log.Printf("Detective checked player %s, role: %s", target.ID, target.Role)
-				teamCheckMessage, _ := json.Marshal(struct {
-					Team string `json:"team"`
-				}{
-					Team: target.Role,
-				})
-				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
-				log.Printf("сообщение игроку %s отправлено", id)
-			}
-		}
-		if game.Players[id].Role == "Провидец ауры" {
-			if target, exists := game.Players[action]; exists {
-				log.Printf("Aura seer checked player %s, aura: %s", target.ID, target.Aura)
-				teamCheckMessage, _ := json.Marshal(struct {
-					Team string `json:"team"`
-				}{
-					Team: target.Aura,
-				})
-				game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
-			}
-		}
-	}
-}
-
-func endDayPhase() {
-	log.Println("Ending day phase. Processing votes...")
-	processVotes()
-	if gameOver, winner := checkGameOver(); gameOver {
-		log.Println(winner)
-		broadcastWinner(winner)
-		game.GameStarted = false
-		return
-	}
-	startNightPhase()
-}
-
-func endNightPhase() {
-	log.Println("Ending night phase. Starting new day.")
-	if gameOver, winner := checkGameOver(); gameOver {
-		log.Println(winner)
-		broadcastWinner(winner)
-		game.GameStarted = false
-		return
-	}
-	game.DayNumber++
-	startDayPhase()
-}
-
-func checkGameOver() (bool, string) {
-	aliveMafia := 0
-	aliveVillagers := 0
-	hackerAlive := false
-	for _, player := range game.Players {
-		if player.IsAlive {
-			if player.Role == "Хакер" {
-				hackerAlive = true
-			}
-			if player.Aura == "bad" {
-				aliveMafia++
-			} else {
-				aliveVillagers++
-			}
-		}
-	}
-
-	if aliveMafia == 0 && !hackerAlive {
-		return true, "Villagers win!"
-	}
-
-	if aliveMafia >= aliveVillagers && !hackerAlive {
-		return true, "Mafia wins!"
-	}
-	if hackerAlive && aliveVillagers == 0 && aliveMafia == 0 {
-		return true, "Hacker win"
-	}
-
-	return false, ""
-}
-
-func broadcastWinner(winner string) {
-	message, _ := json.Marshal(struct {
-		Winner string `json:"winner"`
-	}{
-		Winner: winner,
-	})
-
-	for _, player := range game.Players {
-		player.IsAlive = true
-		player.Hacked = false
-		player.TargetedSunFlowerPlayer = ""
-		player.TargetedScreamerPlayer = ""
-		player.VotedFor = ""
-		player.Action = ""
-		player.Aura = ""
-		player.Role = ""
-		if err := player.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			log.Printf("Failed to send winner message to player %s: %v", player.ID, err)
-		}
-	}
-}
-
-func processVotes() {
-	flowerTarget := ""
-	alivePlayers := 0
-	for _, player := range game.Players {
-		if player.IsAlive {
-			alivePlayers++
-		}
-		if player.Role == "Дитя цветов" {
-			if player.TargetedSunFlowerPlayer != "" {
-				flowerTarget = game.Players[player.TargetedSunFlowerPlayer].ID
-			}
-		}
-		if player.Hacked {
-			player.IsAlive = false
-			log.Printf("Player %s was killed by hacker", player.ID)
+		} else {
+			log.Println("[Night] No one was killed by werewolves this night.")
 		}
 
-		player.VotedFor = ""
-	}
+		log.Printf("[Night] Werewolf votes: %v, threshold=%d, maxVotes=%d, candidates=%v",
+			werewolfVotes, voteThreshold, maxVotes, candidates,
+		)
 
-	voteThreshold := calculateVoteThreshold(alivePlayers)
-
-	maxVotes := 0
-	candidates := []string{}
-	for playerID, votes := range game.Votes {
-		if votes > maxVotes {
-			maxVotes = votes
-			candidates = []string{playerID}
-		} else if votes == maxVotes {
-			candidates = append(candidates, playerID)
-		}
-	}
-
-	log.Printf("Vote threshold: %d, Max votes: %d, Candidates: %v", voteThreshold, maxVotes, candidates)
-
-	if maxVotes >= voteThreshold && len(candidates) == 1 {
-		excludedPlayerID := candidates[0]
-		if player, exists := game.Players[excludedPlayerID]; exists {
-			flag := true
-			if player.ID == flowerTarget {
-				broadcastChatMessage("[SERVER]", "Этого игрока нельзя казнить сегодня.")
-				flag = false
-			} else if player.Role == "Шут" {
-				broadcastWinner("Шут победил!")
-				game.GameStarted = false
-				return
-			} else if player.Role == "Крикун" {
-				log.Println("##Крикун1")
-				if player.TargetedScreamerPlayer != "" {
-					targetPlayer := game.Players[player.TargetedScreamerPlayer]
-					if targetPlayer != nil {
-						log.Println("##Крикун2")
-						broadcastChatMessage("[SERVER]", fmt.Sprintf("Крикун раскрыл роль игрока %s - %s", targetPlayer.ID, targetPlayer.Role))
+		if len(candidates) == 1 && maxVotes >= voteThreshold {
+			targetID := candidates[0]
+			targetPlayer, ok := game.Players[targetID]
+			if ok && targetPlayer.IsAlive && targetID != doctorTarget {
+				if targetPlayer.Role == "Крикун" {
+					log.Println("##Крикун1")
+					if targetPlayer.TargetedScreamerPlayer != "" {
+						targetPlayer := game.Players[targetPlayer.TargetedScreamerPlayer]
+						if targetPlayer != nil {
+							log.Println("##Крикун2")
+							broadcastChatMessage("[SERVER]", fmt.Sprintf("Крикун раскрыл роль игрока %s - %s", targetPlayer.ID, targetPlayer.Role))
+						}
 					}
 				}
+				targetPlayer.IsAlive = false
+				log.Printf("[Night] Werewolves killed player %s", targetID)
 			}
-			if flag {
+		} else {
+			log.Println("[Night] No one was killed by werewolves this night.")
+		}
+
+		// Действия Провидца и Провидца ауры
+		for id, action := range nightActions {
+			if game.Players[id].Role == "Провидец" {
+				if target, exists := game.Players[action]; exists {
+					log.Printf("Detective checked player %s, role: %s", target.ID, target.Role)
+					teamCheckMessage, _ := json.Marshal(struct {
+						Team string `json:"team"`
+					}{
+						Team: target.Role,
+					})
+					game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+					log.Printf("сообщение игроку %s отправлено", id)
+				}
+			}
+			if game.Players[id].Role == "Провидец ауры" {
+				if target, exists := game.Players[action]; exists {
+					log.Printf("Aura seer checked player %s, aura: %s", target.ID, target.Aura)
+					teamCheckMessage, _ := json.Marshal(struct {
+						Team string `json:"team"`
+					}{
+						Team: target.Aura,
+					})
+					game.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
+				}
+			}
+		}
+	}
+
+	func endDayPhase() {
+		log.Println("Ending day phase. Processing votes...")
+		processVotes()
+		if gameOver, winner := checkGameOver(); gameOver {
+			log.Println(winner)
+			broadcastWinner(winner)
+			game.GameStarted = false
+			return
+		}
+		startNightPhase()
+	}
+
+	func endNightPhase() {
+		log.Println("Ending night phase. Starting new day.")
+		if gameOver, winner := checkGameOver(); gameOver {
+			log.Println(winner)
+			broadcastWinner(winner)
+			game.GameStarted = false
+			return
+		}
+		game.DayNumber++
+		startDayPhase()
+	}
+
+	func checkGameOver() (bool, string) {
+		aliveMafia := 0
+		aliveVillagers := 0
+		hackerAlive := false
+		for _, player := range game.Players {
+			if player.IsAlive {
+				if player.Role == "Хакер" {
+					hackerAlive = true
+				}
+				if player.Aura == "bad" {
+					aliveMafia++
+				} else {
+					aliveVillagers++
+				}
+			}
+		}
+
+		if aliveMafia == 0 && !hackerAlive {
+			return true, "Villagers win!"
+		}
+
+		if aliveMafia >= aliveVillagers && !hackerAlive {
+			return true, "Mafia wins!"
+		}
+		if hackerAlive && aliveVillagers == 0 && aliveMafia == 0 {
+			return true, "Hacker win"
+		}
+
+		return false, ""
+	}
+
+	func broadcastWinner(winner string) {
+		message, _ := json.Marshal(struct {
+			Winner string `json:"winner"`
+		}{
+			Winner: winner,
+		})
+
+		for _, player := range game.Players {
+			player.IsAlive = true
+			player.Hacked = false
+			player.TargetedSunFlowerPlayer = ""
+			player.TargetedScreamerPlayer = ""
+			player.VotedFor = ""
+			player.Action = ""
+			player.Aura = ""
+			player.Role = ""
+			if err := player.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("Failed to send winner message to player %s: %v", player.ID, err)
+			}
+		}
+	}
+
+	func processVotes() {
+		flowerTarget := ""
+		alivePlayers := 0
+		for _, player := range game.Players {
+			if player.IsAlive {
+				alivePlayers++
+			}
+			if player.Role == "Дитя цветов" {
+				if player.TargetedSunFlowerPlayer != "" {
+					flowerTarget = game.Players[player.TargetedSunFlowerPlayer].ID
+				}
+			}
+			if player.Hacked {
 				player.IsAlive = false
-				log.Printf("Player %s was voted out.", excludedPlayerID)
+				log.Printf("Player %s was killed by hacker", player.ID)
+			}
+
+			player.VotedFor = ""
+		}
+
+		voteThreshold := calculateVoteThreshold(alivePlayers)
+
+		maxVotes := 0
+		candidates := []string{}
+		for playerID, votes := range game.Votes {
+			if votes > maxVotes {
+				maxVotes = votes
+				candidates = []string{playerID}
+			} else if votes == maxVotes {
+				candidates = append(candidates, playerID)
 			}
 		}
-	} else {
-		log.Println("No player was excluded.")
+
+		log.Printf("Vote threshold: %d, Max votes: %d, Candidates: %v", voteThreshold, maxVotes, candidates)
+
+		if maxVotes >= voteThreshold && len(candidates) == 1 {
+			excludedPlayerID := candidates[0]
+			if player, exists := game.Players[excludedPlayerID]; exists {
+				flag := true
+				if player.ID == flowerTarget {
+					broadcastChatMessage("[SERVER]", "Этого игрока нельзя казнить сегодня.")
+					flag = false
+				} else if player.Role == "Шут" {
+					broadcastWinner("Шут победил!")
+					game.GameStarted = false
+					return
+				} else if player.Role == "Крикун" {
+					log.Println("##Крикун1")
+					if player.TargetedScreamerPlayer != "" {
+						targetPlayer := game.Players[player.TargetedScreamerPlayer]
+						if targetPlayer != nil {
+							log.Println("##Крикун2")
+							broadcastChatMessage("[SERVER]", fmt.Sprintf("Крикун раскрыл роль игрока %s - %s", targetPlayer.ID, targetPlayer.Role))
+						}
+					}
+				}
+				if flag {
+					player.IsAlive = false
+					log.Printf("Player %s was voted out.", excludedPlayerID)
+				}
+			}
+		} else {
+			log.Println("No player was excluded.")
+		}
+
+		game.Votes = make(map[string]int)
+		broadcastGameStatus()
 	}
-
-	game.Votes = make(map[string]int)
-	broadcastGameStatus()
-}
-
+*/
 func calculateVoteThreshold(alivePlayers int) int {
 	if alivePlayers%2 == 0 {
 		return alivePlayers / 2
