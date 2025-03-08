@@ -6,14 +6,34 @@ import (
 	"log"
 )
 
+const SERVER string = "[SERVER]"
+
 type ChatMessage struct {
 	PlayerID string `json:"playerID"`
 	Chat     string `json:"chat"`
 }
 
 func (g *Game) broadcastChatMessage(playerID, chatMessage string) {
-	for _, player := range g.Players {
-		g.broadcastChatMessageToPlayer(playerID, player.ID, chatMessage)
+
+	var playerArea SpeakArea = all
+
+	if playerID != SERVER {
+		player, err := g.GetPlayer(playerID)
+		if err != nil {
+			log.Printf("Player with id %s not found: %v", playerID, err)
+			return
+		}
+
+		playerArea = player.GetSpeakArea(player, g.CurrentPhase)
+		if playerArea == nobody {
+			return
+		}
+	}
+
+	for _, recipient := range g.Players {
+		if playerArea == all || recipient.GetSpeakArea(recipient, g.CurrentPhase) == playerArea {
+			g.broadcastChatMessageToPlayer(playerID, recipient.ID, chatMessage)
+		}
 	}
 }
 
@@ -37,8 +57,6 @@ func (g *Game) broadcastChatMessageToPlayer(fromID, toID, chatMessage string) {
 }
 
 func (g *Game) GetChatHistory(playerID string) []ChatMessage {
-	g.Mutex.Lock()
-	defer g.Mutex.Unlock()
 	player, err := g.GetPlayer(playerID)
 	if err != nil {
 		log.Printf("Не удалось получить историю чата игрока")

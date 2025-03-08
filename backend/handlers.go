@@ -26,7 +26,6 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	game.Mutex.Lock()
 	/*player, exists := game.Players[playerID]
 	if !exists {
 		player = &Player{
@@ -36,7 +35,6 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		game.Players[playerID] = player
 		log.Printf("Создан новый игрок %s через joinRoomHandler", playerID)
 	}*/
-	game.Mutex.Unlock()
 
 	/*room := joinRoom(player)
 	w.Header().Set("Content-Type", "application/json")
@@ -83,9 +81,6 @@ func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Принят запрос на добавление игрока %s в комнату %s", playerID, req.RoomID)
 
 	// Если у вас есть какой-то общий мьютекс для синхронизации, используйте его:
-	game.Mutex.Lock()
-	defer game.Mutex.Unlock()
-
 	// Добавляем игрока в комнату
 	log.Printf("Пытаемся добавить игрока %s в комнату %s", playerID, req.RoomID)
 
@@ -126,9 +121,7 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Принят запрос на создание комнаты %s", req.RoomID)
 
-	game.Mutex.Lock()
 	room, err := roomManager.CreateRoom(req.RoomID)
-	game.Mutex.Unlock()
 
 	if err != nil {
 		log.Printf("Ошибка при создании комнаты %s - %s", req.RoomID, err)
@@ -145,25 +138,31 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Обработка выхода из комнаты")
+
 	playerID := r.URL.Query().Get("id")
 	if playerID == "" {
 		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
 		return
 	}
 
-	roomLock.Lock()
-	for _, room := range rooms {
-		if _, exists := room.Players[playerID]; exists {
-			delete(room.Players, playerID)
-			log.Printf("Игрок %s покинул комнату %s", playerID, room.ID)
-			break
-		}
+	roomID := r.URL.Query().Get("roomId")
+	if roomID == "" {
+		http.Error(w, "ID комнаты не указан", http.StatusBadRequest)
+		return
 	}
-	roomLock.Unlock()
 
-	game.Mutex.Lock()
-	delete(game.Players, playerID)
-	game.Mutex.Unlock()
+	log.Printf("Попытка получения комнаты %s", roomID)
+
+	room, err := roomManager.GetRoom(roomID)
+	if err != nil {
+		log.Printf("Ошибка при получении комнаты: %v", err)
+		http.Error(w, "Комната не найдена", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("Удаление игрока %s из комнаты %s", playerID, roomID)
+	room.RemovePlayer(playerID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
@@ -287,7 +286,7 @@ func ServeGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func GameStatus(w http.ResponseWriter, r *http.Request) {
-	game.Mutex.Lock()
+	/*game.Mutex.Lock()
 	log.Println("Mutex UNLocked")
 	status, _ := json.Marshal(struct {
 		Phase   string          `json:"phase"`
@@ -305,5 +304,5 @@ func GameStatus(w http.ResponseWriter, r *http.Request) {
 		Day: game.DayNumber,
 	})
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(status)
+	w.Write(status)*/
 }

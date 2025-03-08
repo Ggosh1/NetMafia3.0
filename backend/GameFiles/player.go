@@ -3,6 +3,7 @@ package GameFiles
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -13,46 +14,69 @@ type Team string
 const (
 	mafia    Team = "mafia"
 	villager Team = "villager"
-	neutral  Team = "neutral"
+	solo     Team = "solo"
 )
 
-// Интерфейс для ролевых действий
-type Role interface {
-	NightAction(players map[string]*Player) // Ночное действие
-}
+type Aura string
+
+const (
+	good    Aura = "good"
+	evil    Aura = "evil"
+	unknown Aura = "unknown"
+)
+
+type SpeakArea string
+
+const (
+	all    SpeakArea = "all"
+	nobody SpeakArea = "nobody"
+	wolfs  SpeakArea = "wolfs"
+	prison SpeakArea = "prison"
+)
+
+type DieType string
+
+const (
+	voting      DieType = "voting"
+	mafiaVoting DieType = "mafiaVoting"
+	hack        DieType = "hack"
+	jail        DieType = "jail"
+)
 
 // Базовая структура игрока
 type PlayerInfo struct {
-	ID              string
-	InRoom          bool
-	RoomID          string
-	Conn            *websocket.Conn
-	IsAlive         bool
-	HaveNightAction bool
-	ChosenPlayer    string
-	VotedFor        string // ID выбранного игрока
-	Mutex           sync.Mutex
-	Team            Team
-	ChatHistory     []ChatMessage
-	CanStartGame    bool
-	IsProtected     bool
-	IsHacked        bool
+	ID           string
+	InRoom       bool
+	RoomID       string
+	Conn         *websocket.Conn
+	IsAlive      bool
+	Target       string
+	VotedFor     string // ID выбранного игрока
+	Mutex        sync.Mutex
+	ChatHistory  []ChatMessage
+	CanStartGame bool
+	IsProtected  bool
+	IsHacked     bool
+	IsJailed     bool
+	NeedExecute  bool
+	diedBy       DieType
 }
 
 func NewPlayerInfo(playerID string) *PlayerInfo {
 	return &PlayerInfo{
-		ID:              playerID,
-		InRoom:          false,
-		RoomID:          "",
-		IsAlive:         false,
-		HaveNightAction: false,
-		VotedFor:        "",
-		Team:            neutral,
-		ChatHistory:     []ChatMessage{},
-		ChosenPlayer:    "",
-		CanStartGame:    false,
-		IsProtected:     false,
-		IsHacked:        false,
+		ID:           playerID,
+		InRoom:       false,
+		RoomID:       "",
+		IsAlive:      false,
+		VotedFor:     "",
+		ChatHistory:  []ChatMessage{},
+		Target:       "",
+		CanStartGame: false,
+		IsProtected:  false,
+		IsHacked:     false,
+		IsJailed:     false,
+		NeedExecute:  false,
+		diedBy:       "",
 	}
 }
 
@@ -60,14 +84,15 @@ func (p *Player) ResetPlayer() {
 	p.InRoom = false
 	p.RoomID = ""
 	p.IsAlive = false
-	p.HaveNightAction = false
+	p.Target = ""
 	p.VotedFor = ""
-	p.Team = neutral
 	p.ChatHistory = []ChatMessage{}
-	p.ChosenPlayer = ""
 	p.CanStartGame = false
 	p.IsProtected = false
 	p.IsHacked = false
+	p.IsJailed = false
+	p.NeedExecute = false
+	p.diedBy = ""
 }
 
 // Метод выбора игрока
@@ -95,11 +120,18 @@ func (p *Player) ResetVotedPlayer() {
 }
 
 // Метод смерти игрока
-func (p *Player) Die() {
+func (p *Player) Die(dieType DieType) {
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
+
+	if p.IsProtected && (dieType == mafiaVoting || dieType == voting) {
+		log.Printf("Player %s has protected\n", p.ID)
+		return
+	}
+
 	p.IsAlive = false
-	fmt.Printf("Player %s has died\n", p.ID)
+	p.diedBy = dieType
+	log.Printf("Player %s has died\n", p.ID)
 }
 
 type Player struct {
@@ -110,7 +142,7 @@ type Player struct {
 func NewPlayer(playerID string) *Player {
 	return &Player{
 		PlayerInfo: NewPlayerInfo(playerID),
-		Role:       nil,
+		Role:       &SpectatorRole{},
 	}
 }
 
@@ -141,4 +173,10 @@ func (p *Player) AddChatMessage(message ChatMessage) {
 	defer p.Mutex.Unlock()
 
 	p.ChatHistory = append(p.ChatHistory, message)
+}
+
+func (p *Player) ChooseTarget(id string) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+	p.Target = id
 }

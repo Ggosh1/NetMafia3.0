@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mafia Game</title>
     <!-- Подключаем Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,25 +17,22 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: Arial, sans-serif;
             transition: background-color 0.5s ease, color 0.5s ease;
-            height: 100vh;  /* чтобы занять всю высоту экрана */
+            height: 100vh; /* чтобы занять всю высоту экрана */
             display: flex;
         }
         body.night {
             background-color: #2c3e50; /* Темный фон для ночи */
             color: #ecf0f1; /* Светлый текст */
         }
-
         /* Главный контейнер – делим экран на две колонки: слева чат, справа сетка */
         .container {
             display: grid;
             grid-template-columns: 350px 1fr; /* Ширину левой колонки можно менять */
             width: 100%;
         }
-
         /* Левая панель с чатом */
         .chat-container {
             display: flex;
@@ -48,20 +45,18 @@
         body.night .chat-container {
             background-color: #34495e;
         }
-
-        /* Заголовок чата (можно перенести куда угодно) */
+        /* Заголовок чата */
         .chat-header {
             padding: 10px;
             text-align: center;
             font-weight: bold;
             font-size: 18px;
         }
-
         /* Лог и сообщения */
         #log {
-            flex: 1;             /* занимает всё доступное пространство по высоте */
-            overflow-y: auto;    /* прокрутка */
-            max-height: 75vh; /* или любое другое подходящее значение */
+            flex: 1;
+            overflow-y: auto;
+            max-height: 75vh;
             padding: 10px;
             border-top: 1px solid #ccc;
             border-bottom: 1px solid #ccc;
@@ -73,8 +68,7 @@
             background-color: #2c3e50;
             color: #ecf0f1;
         }
-
-        /* Роль игрока и таймер можно показать где-то в чате */
+        /* Отображение роли и таймера */
         #role-display,
         #timer {
             padding: 10px;
@@ -82,14 +76,13 @@
             font-weight: bold;
         }
         #role-display {
-            color: #007bff; /* Синий цвет для роли днём */
+            color: #007bff;
             transition: color 0.5s ease;
         }
         body.night #role-display {
-            color: #ecf0f1; /* Светлый цвет для роли ночью */
+            color: #ecf0f1;
         }
-
-        /* Поле и кнопка чата */
+        /* Чат */
         #chat-controls {
             display: flex;
             gap: 10px;
@@ -118,7 +111,6 @@
         #chat-controls button:hover {
             background-color: #0056b3;
         }
-
         /* Контейнер для кнопок внизу */
         .bottom-controls {
             display: flex;
@@ -126,8 +118,9 @@
             gap: 10px;
             padding: 10px;
         }
-        /* Кнопки Start/Connect и т.д. */
-        .bottom-controls button {
+        /* Отдельные контейнеры для игровых и таргетных кнопок */
+        #game-controls button,
+        #target-controls button {
             padding: 10px 20px;
             font-size: 14px;
             border: none;
@@ -136,10 +129,10 @@
             color: white;
             cursor: pointer;
         }
-        .bottom-controls button:hover {
+        #game-controls button:hover,
+        #target-controls button:hover {
             background-color: #0056b3;
         }
-
         /* Правая панель с сеткой игроков */
         .player-grid-container {
             padding: 10px;
@@ -156,9 +149,8 @@
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, auto);
             gap: 10px;
-            max-width: 1200px; /* Можно убрать или изменить */
+            max-width: 1200px;
         }
-
         /* Карточки игроков */
         .player-card {
             background: #fff;
@@ -167,14 +159,13 @@
             padding: 10px;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            color: #000; /* Цвет текста днём */
+            color: #000;
             transition: background-color 0.5s ease, color 0.5s ease;
         }
         body.night .player-card {
-            background: #34495e; /* Темный фон карточки ночью */
-            color: #ecf0f1;      /* Светлый текст ночью */
+            background: #34495e;
+            color: #ecf0f1;
         }
-
         .player-card.alive {
             border-color: green;
         }
@@ -182,7 +173,6 @@
             border-color: red;
             opacity: 0.6;
         }
-
         .player-avatar {
             width: 80px;
             height: 80px;
@@ -190,25 +180,22 @@
             border-radius: 50%;
             margin: 10px auto;
         }
-
         .player-name {
             font-weight: bold;
         }
-
         .player-card.selected {
-            border-color: blue; /* Выделяем выбранного игрока синим */
+            border-color: blue;
             box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
         }
         .player-card.dead.selected {
-            border-color: red; /* Отключаем визуальное выделение для мёртвого */
+            border-color: red;
             box-shadow: none;
         }
         .player-card.targeted {
-            border-color: orange; /* Цвет рамки для цели */
-            box-shadow: 0 0 10px rgba(255, 165, 0, 0.8); /* Эффект подсветки */
+            border-color: orange;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
         }
-
-        /* Кнопка выхода (крестик) в правом верхнем углу */
+        /* Кнопка выхода */
         #exitBtn {
             position: fixed;
             top: 16px;
@@ -235,30 +222,27 @@
     <!-- Левая колонка (чат, логи, таймер, роль, кнопки) -->
     <div class="chat-container">
         <div class="chat-header">Wolvesville (Mafia) Chat</div>
-
         <!-- Лог событий -->
         <div id="log"></div>
-
-        <!-- Отображение роли и таймера (при желании можно поменять порядок) -->
+        <!-- Отображение роли и таймера -->
         <div id="role-display">Your role: Not assigned</div>
         <div id="timer">Phase timer: <span id="time-remaining">30</span> seconds</div>
-
         <!-- Чат -->
         <div id="chat-controls">
-            <input type="text" id="chat-input" placeholder="Type your message..."/>
+            <input type="text" id="chat-input" placeholder="Type your message..." />
             <button onclick="sendChatMessage()">Send</button>
         </div>
-
-        <!-- Нижний блок с кнопками (Start Game, ChoosePlayer, Clear Target) -->
+        <!-- Нижний блок с кнопками -->
         <div class="bottom-controls">
-            <div id="controls">
+            <div id="game-controls">
                 <button onclick="startGame()">Start Game</button>
-                <button onclick="choosePlayer()">ChoosePlayer</button>
-                <button onclick="clearTarget()">Clear Target</button>
+            </div>
+            <!-- Контейнер для кнопок выбора цели, скрыт по умолчанию -->
+            <div id="target-controls" style="display: none;">
+                <button onclick="ChooseTarget()">ChoosePlayer</button>
             </div>
         </div>
     </div>
-
     <!-- Правая колонка (сетка игроков) -->
     <div class="player-grid-container">
         <div id="player-grid"></div>
@@ -266,29 +250,33 @@
 </div>
 
 <script>
-    {
-        const input = document.getElementById("chat-input");
-        input.addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                sendChatMessage();
-            }
-        });
-    }
+    // Обработчик нажатия Enter для чата
+    const input = document.getElementById("chat-input");
+    input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            sendChatMessage();
+        }
+    });
 
-    // Добавляем обработчик beforeunload для корректного закрытия WebSocket
+    // Закрытие WebSocket при закрытии вкладки
     window.addEventListener("beforeunload", function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.close(1000, "Tab closed");
         }
     });
+
     let ws;
     let timerInterval;
     let selectedPlayerID = null; // Хранит ID выбранного игрока
+    let needToChooseTarget = false; // Флаг, показывающий необходимость выбора цели
+    let chooseTargetMode = false; // Флаг, показывающий режим выбора
+    let targetPlayerID = "";
 
-    const players = {}; // Хранение информации об игроках
+    const players = {}; // Информация об игроках
     let currentVotes = {};
     const params = new URLSearchParams(window.location.search);
     const playerId = params.get("id");
+    let endGame = false;
     if (!playerId) {
         alert("ID игрока не указан. Пожалуйста, заходите через страницу входа.");
     }
@@ -299,7 +287,6 @@
             log("ID игрока не найден. Зайдите через страницу входа.");
             return;
         }
-
         ws = new WebSocket(`ws://localhost:8080/ws?id=${encodeURIComponent(playerId)}`);
         ws.onopen = () => { log(`Connected as ${playerId}`); };
         ws.onmessage = (event) => {
@@ -309,15 +296,28 @@
         ws.onclose = () => { log("Disconnected from server"); };
     }
 
+    let isGameover = false
+
     function handleServerMessage(message) {
+        if (isGameover) {
+            return
+        }
+
         if (message.time_remaining !== undefined) {
             document.getElementById("time-remaining").textContent = message.time_remaining;
         }
 
         selectedPlayerID = message.player_vote;
+        targetPlayerID = message.target;
+
+        // Если сервер сообщает, что нужно выбрать цель, обновляем флаг и отображение кнопок
+        if (message.need_to_choose_target !== undefined) {
+            needToChooseTarget = message.need_to_choose_target;
+            const targetControls = document.getElementById("target-controls");
+            targetControls.style.display = needToChooseTarget ? "block" : "none";
+        }
 
         if (message.role) {
-            log(`Your role is: ${message.role}`);
             updateRoleDisplay(message.role);
         }
 
@@ -334,6 +334,11 @@
                 document.body.classList.add("night");
             } else if (message.phase === "day") {
                 document.body.classList.remove("night");
+            } else if (message.phase === "gameover") {
+                isGameover = true
+                log(`Game over! ${message.winner}`);
+                alert(`Game over! ${message.winner}`);
+                leaveRoom()
             }
         }
 
@@ -341,11 +346,11 @@
             updatePlayerGrid(message.players);
         }
 
-        if (message.winner) {
+        /*if (message.winner) {
             log(`Game over! ${message.winner}`);
             alert(`Game over! ${message.winner}`);
-            window.location.href = '/profile?id=' + encodeURIComponent(playerId);
-        }
+            leaveRoom()
+        }*/
 
         if (message.chat) {
             displayChatMessage(message.playerID, message.chat);
@@ -371,9 +376,8 @@
 
     function updatePlayerGrid(playerStatus) {
         const playerGrid = document.getElementById("player-grid");
-        playerGrid.innerHTML = ""; // Очищаем список игроков
+        playerGrid.innerHTML = "";
         const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
-
         Object.entries(playerStatus).forEach(([playerID, isAlive]) => {
             if (playerID === "targetedScreamPlayer" || playerID === "targetedSunFlowermPlayer") return;
             const playerCard = document.createElement("div");
@@ -386,13 +390,11 @@
             if (playerID === targetedPlayerID && isAlive) {
                 playerCard.classList.add("targeted");
             }
-
             playerCard.innerHTML = `
-                    <div class="player-avatar"></div>
-                    <div class="player-name">${playerID}</div>
-                    <div>Status: ${isAlive ? "Alive" : "Dead"}</div>
-                `;
-
+          <div class="player-avatar"></div>
+          <div class="player-name">${playerID}</div>
+          <div>Status: ${isAlive ? "Alive" : "Dead"}</div>
+        `;
             const votedFor = currentVotes[playerID];
             if (votedFor) {
                 const voteSign = document.createElement("div");
@@ -400,23 +402,12 @@
                 voteSign.textContent = "⚔️ " + votedFor + " ⚔️";
                 playerCard.appendChild(voteSign);
             }
-
             if (isAlive) {
                 playerCard.onclick = () => handleVoteClick(playerID, isAlive);
             }
             playerGrid.appendChild(playerCard);
             players[playerID] = isAlive;
         });
-    }
-
-    function sendVote() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const voteFor = prompt("Enter player ID to vote for:");
-            ws.send(JSON.stringify({ action: "vote", vote: voteFor }));
-            console.log(`Voted for ${voteFor}`);
-        } else {
-            console.log("WebSocket is not connected");
-        }
     }
 
     function log(message) {
@@ -436,28 +427,15 @@
         }
     }
 
-    // Функция для выбора игрока
-    function chooseTarget() {
+    // Функция для выбора цели
+    function ChooseTarget() {
         if (ws && ws.readyState === WebSocket.OPEN) {
-            const playerID = prompt("Enter the player ID to choose:");
-            if (playerID) {
-                ws.send(JSON.stringify({ action: "choose_player", player: playerID }));
-                log(`Chosen player: ${playerID}`);
-            } else {
-                log("No player ID entered.");
-            }
+            chooseTargetMode = true;
+            log("Режим выбора цели активирован. Нажмите на игрока для выбора цели.");
+            // Если есть контейнер с кнопками выбора, можно его показать:
+            //document.getElementById("target-controls").style.display = "block";
         } else {
-            log("WebSocket is not connected.");
-        }
-    }
-
-    // Функция для очистки цели
-    function clearTarget() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ action: "scream_target", vote: "" }));
-            log("Target cleared.");
-        } else {
-            log("WebSocket is not connected.");
+            log("WebSocket не подключён.");
         }
     }
 
@@ -469,8 +447,8 @@
     function sendChatMessage() {
         const input = document.getElementById("chat-input");
         const message = input.value.trim();
-
         if (message && ws && ws.readyState === WebSocket.OPEN) {
+            log("penis")
             ws.send(JSON.stringify({ action: "chat", message }));
             input.value = "";
         } else if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -487,30 +465,23 @@
     }
 
     function handleVoteClick(playerID, isAlive) {
-        if (!isAlive) {
-            log("You cannot vote for a dead player.");
-            return;
-        }
-
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+            if (chooseTargetMode) {
+                // Если активирован режим выбора цели – отправляем выбор цели
+                ws.send(JSON.stringify({ action: "choose_target", target: playerID }));
+                log(`Выбрана цель: ${playerID}`);
+                chooseTargetMode = false; // Выходим из режима выбора цели
+                //document.getElementById("target-controls").style.display = "none";
+            } else {
+                // Обычная логика голосования
+                ws.send(JSON.stringify({ action: "vote", vote: playerID }));
+            }
             updatePlayerGrid(players);
         } else {
-            log("WebSocket is not connected.");
+            log("WebSocket не подключён.");
         }
     }
 
-    function selectTarget() {
-        const targetID = prompt("Enter the player ID you want to target:");
-        if (targetID && players[targetID]) {
-            ws.send(JSON.stringify({ action: "scream_target", vote: targetID }));
-            log(`Target selected: ${targetID}`);
-        } else {
-            log("Invalid player ID.");
-        }
-    }
-
-    // handleExit остался без изменений
     function handleExit() {
         const params = new URLSearchParams(window.location.search);
         const username = params.get("id");
@@ -519,23 +490,34 @@
             return;
         }
         if (confirm("Вы действительно хотите выйти из игры?")) {
-            fetch('/leaveroom?id=' + encodeURIComponent(username))
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { throw new Error(text); });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Выход выполнен успешно:", data);
-                    window.location.href = '/profile?id=' + encodeURIComponent(username);
-                })
-                .catch(error => {
-                    console.error("Ошибка при выходе из комнаты:", error);
-                    alert("Ошибка при выходе: " + error.message);
-                });
+            leaveRoom()
         }
     }
+
+    function leaveRoom(){
+        //log("Пытаюсь выйти из игры")
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get("id");
+        const roomId = params.get("roomId");
+        fetch(`/leaveroom?id=${encodeURIComponent(username)}&roomId=${encodeURIComponent(roomId)}`)
+            .then(response => {
+                //log("Хуйня какая-то")
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                log("Выход выполнен успешно:", data);
+                log("Выход выполнен успешно:");
+                window.location.href = '/profile?id=' + encodeURIComponent(username);
+            })
+            .catch(error => {
+                log("Ошибка при выходе из комнаты:", error);
+                alert("Ошибка при выходе: " + error.message);
+            });
+    }
+
 </script>
 </body>
 </html>

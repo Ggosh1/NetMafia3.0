@@ -14,9 +14,7 @@ func NewRoom(id string) *Room {
 	return &Room{
 		ID:      id,
 		Players: make(map[string]*Player),
-		Game: &Game{
-			Players: make(map[string]*Player),
-		},
+		Game:    NewGame(),
 	}
 }
 
@@ -41,7 +39,7 @@ func (r *Room) RemovePlayer(playerID string) {
 		fmt.Printf("Игрок %s не найден в комнате %s\n", playerID, r.ID)
 		return
 	}
-	delete(r.Game.Players, playerID)
+	r.Game.RemovePlayer(playerID)
 	fmt.Printf("Игрок %s удалён из комнаты %s\n", playerID, r.ID)
 }
 

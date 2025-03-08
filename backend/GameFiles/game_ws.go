@@ -20,26 +20,41 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 		return players
 	}()
 
+	votes := g.GetVotesMap()
+	if g.CurrentPhase == night && player.GetTeam() != mafia {
+		votes = make(map[string]int)
+	}
+
+	_, winnermsg := g.CheckGameOver()
+
 	status := struct {
 		Phase                   string          `json:"phase"`
+		Winner                  string          `json:"winner"`
 		Players                 map[string]bool `json:"players"`
 		TargetedScreamPlayer    string          `json:"targeted_scream_player,omitempty"`
 		TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player,omitempty"`
 		TimeRemaining           int             `json:"time_remaining"`
 		Votes                   map[string]int  `json:"votes"`
 		PlayerVote              string          `json:"player_vote"`
-		ChosenPlayer            string          `json:"player_choise"`
+		Target                  string          `json:"target"`
 		CanStartGame            bool            `json:"can_start_game"`
 		IsHacked                bool            `json:"hacked"`
+		PlayerRole              string          `json:"role"`
+		HaveNightAction         bool            `json:"have_night_action"`
+		NeedToChooseTarget      bool            `json:"need_to_choose_target"`
 	}{
 		Phase:         string(g.CurrentPhase),
+		Winner:        winnermsg,
 		Players:       alivePlayerInfo,
 		TimeRemaining: g.TimeRemaining,
 		PlayerVote:    player.VotedFor,
-		Votes:         g.GetVotesMap(),
-		ChosenPlayer:  player.ChosenPlayer,
-		CanStartGame:  player.CanStartGame,
-		IsHacked:      player.IsHacked,
+		Votes:         votes,
+		Target:        player.Target,
+		//CanStartGame:  player.CanStartGame,
+		IsHacked:           player.IsHacked,
+		PlayerRole:         player.GetRussianName(),
+		HaveNightAction:    player.HaveNightAction(),
+		NeedToChooseTarget: player.NeedTarget(g.CurrentPhase),
 	}
 
 	//log.Printf("Игрок %s голосует за %s", player.ID, player.VotedFor)
@@ -65,7 +80,7 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 		return
 	}
 
-	log.Printf("Сообщение от сервера игроку %s : %s", player.ID, status)
+	//og.Printf("Сообщение от сервера игроку %s : %s", player.ID, status)
 
 	err = player.Conn.WriteMessage(websocket.TextMessage, data)
 	if err != nil {
@@ -76,26 +91,31 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 
 func (g *Game) BroadcastGameStatusToAllPlayers() {
 	for _, player := range g.Players {
+		if player.Conn == nil || !player.InRoom {
+			continue
+		}
 		g.BroadcastGameStatus(player.ID)
 	}
 }
 
-func (g *Game) ProcessMessage(playerID string, message []byte) {
+func (g *Game) ProcessMessage(playerID string, message []byte) bool {
 	var msg struct {
 		Action  string `json:"action"`
-		Target  string `json:"vote"`
+		Vote    string `json:"vote"`
+		Target  string `json:"target"`
 		Message string `json:"message"`
 	}
+	log.Printf("Message from %s", playerID)
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Printf("Failed to parse message: %s", err)
-		return
+		return false
 	}
 
 	player, exists := g.Players[playerID]
 
 	if exists == false {
 		log.Printf("Player %s not found in game", playerID)
-		return
+		return false
 	}
 
 	switch msg.Action {
@@ -104,154 +124,23 @@ func (g *Game) ProcessMessage(playerID string, message []byte) {
 		go g.StartGame(playerID)
 	case "chat":
 		g.broadcastChatMessage(playerID, msg.Message)
-
 	case "vote":
-		player.VoteForPlayer(msg.Target)
+		log.Printf("Player %s voted for %s", playerID, msg.Vote)
+		if g.PlayerCanVote(playerID) == false {
+			return false
+		}
+		player.VoteForPlayer(msg.Vote)
 
 		log.Printf("Итоговый голос игрока %s - %s", playerID, player.VotedFor)
 		g.BroadcastGameStatusToAllPlayers()
-
+	case "choose_target":
+		log.Printf("Player %s targeted %s", playerID, msg.Target)
+		player.ChooseTarget(msg.Target)
+		g.BroadcastGameStatusToAllPlayers()
+	case "leave_room":
+		log.Printf("Player %s requested to leave the Game", playerID)
+		return true
 	}
 
-	return
-	/*if msg.Action == "start_game" {
-		log.Printf("Player %s requested to start the GameFiles", playerID)
-		go StartGame(playerID)
-		return
-	}
-
-	game.Mutex.Lock()
-	player, exists := game.Players[playerID]
-	if !exists || !player.IsAlive {
-		game.Mutex.Unlock()
-		return
-	}
-
-	switch msg.Action {
-
-	case "vote":
-		// Голосуем только в дневной фазе и если игрок не взломан
-		if game.CurrentPhase == "day" && !player.Hacked {
-			// Запрещаем голосовать за самого себя
-			if msg.Target == playerID {
-				log.Printf("Player %s attempted to vote for themselves. Vote ignored.", playerID)
-				game.Mutex.Unlock()
-				return
-			}
-
-			var needSetVote bool = true
-			if player.VotedFor != "" && player.VotedFor == msg.Target {
-				log.Printf("Player %s attempted to vote for the same target twice. Vote ignored.", playerID)
-				needSetVote = false
-			}
-
-			if player.VotedFor != "" {
-				log.Printf("Удаление голоса игрока %s.", playerID)
-				game.Votes[player.VotedFor]--
-				if game.Votes[player.VotedFor] < 0 {
-					game.Votes[player.VotedFor] = 0
-				}
-				player.VotedFor = ""
-			}
-
-			if _, ok := game.Players[msg.Target]; ok && needSetVote {
-				player.VotedFor = msg.Target
-				game.Votes[msg.Target]++
-				log.Printf("Player %s voted for %s", playerID, msg.Target)
-			}
-
-			//log.Printf("Итоговый голос игрока %s - %s", playerID, player.VotedFor)
-			BroadcastGameStatusToAllPlayers()
-
-		} else if game.CurrentPhase == "night" && !player.Hacked {
-			if msg.Target == playerID {
-				log.Printf("Player %s attempted to target themselves at night. Action ignored.", playerID)
-				game.Mutex.Unlock()
-				return
-			}
-
-			var needSetVote bool = true
-			// Если игрок уже выбрал эту же цель, игнорируем повторное действие
-			if player.VotedFor != "" && player.VotedFor == msg.Target {
-				log.Printf("Player %s attempted to target the same player twice at night. Action ignored.", playerID)
-				needSetVote = false
-			}
-
-			// Если уже было выбрано что-то ранее, удаляем предыдущий выбор
-			if player.Action != "" {
-				log.Printf("Removing previous night action for player %s.", playerID)
-				// Если ведется счет голосов/выборов ночью, можно его уменьшить
-				player.Action = ""
-				player.VotedFor = ""
-			}
-
-			// Если цель существует и новое действие нужно установить
-			if _, ok := game.Players[msg.Target]; ok && needSetVote {
-				player.Action = msg.Target
-				player.VotedFor = msg.Target
-				log.Printf("Player %s targeted %s at night.", playerID, msg.Target)
-			}
-
-			BroadcastGameStatusToAllPlayers()
-
-			BroadcastGameStatusToAllPlayers()
-		}
-
-		game.Mutex.Unlock()
-
-	/*case "cancel_vote":
-	// Обработка отмены голоса в дневной фазе (если голос был поставлен)
-	if GameFiles.CurrentPhase == "day" && !player.Hacked {
-		// Обрабатываем отмену только если передан целевой ID совпадающий с текущим голосом
-		if player.VotedFor != "" && msg.Target == player.VotedFor {
-			GameFiles.Votes[player.VotedFor]--
-			if GameFiles.Votes[player.VotedFor] < 0 {
-				GameFiles.Votes[player.VotedFor] = 0
-			}
-			player.VotedFor = ""
-		}
-	} else if GameFiles.CurrentPhase == "night" {
-		player.Action = ""
-	}
-	GameFiles.Mutex.Unlock()*/
-
-	/*case "chat":
-		// Сообщения в чат обрабатываем без блокировки, чтобы не держать мьютекс во время сетевых операций
-		game.Mutex.Unlock()
-		if !player.Hacked {
-			broadcastChatMessage(playerID, msg.Message)
-		}
-
-	case "scream_target":
-		// Обработка для ролей "Крикун" и "Дитя цветов"
-		if player.Role == "Крикун" {
-			player.TargetedScreamerPlayer = msg.Target
-			log.Printf("Screamer selected target: %s", msg.Target)
-		} else if player.Role == "Дитя цветов" {
-			player.TargetedSunFlowerPlayer = msg.Target
-			log.Printf("FlowerChild selected target: %s", msg.Target)
-		}
-		game.Mutex.Unlock()
-		BroadcastGameStatusToAllPlayers()
-
-	default:
-		game.Mutex.Unlock()
-	}
-	*/
+	return false
 }
-
-/*func (g *Game) SendMessage(playerID string, message []byte) {
-	log.Printf("Отправка сообщения пользователю %s", playerID)
-
-	if player, exists := g.Players[playerID]; exists {
-		if player.Conn == nil {
-			log.Printf("Соединение с пользователем %s", playerID)
-
-		}
-	}
-	else{
-		log.Printf("Пользователя с таким id не существует: %s", playerID)
-	}
-	g.Players[id].Conn.WriteMessage(websocket.TextMessage, teamCheckMessage)
-	log.Printf("сообщение игроку %s отправлено", id)
-}*/

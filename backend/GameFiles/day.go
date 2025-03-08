@@ -21,18 +21,25 @@ func (g *Game) EndDayPhase() {
 		if cnt > maxVotesCnt {
 			maxVotesCnt = cnt
 			playerWithMaxVotes = player
+		} else if cnt == maxVotesCnt {
+			playerWithMaxVotes = ""
 		}
 	}
 
-	if maxVotesCnt >= len(g.Players)/2 {
+	if maxVotesCnt >= (g.GetAliveCnt()+1)/2 && playerWithMaxVotes != "" {
 		player, err := g.GetPlayer(playerWithMaxVotes)
 		if err != nil {
 			return
 		}
-		player.Die()
+		g.KillPlayer(player.ID, voting)
 	}
 
+	isGameOver, _ := g.CheckGameOver()
 	g.ResetVotes()
 	g.BroadcastGameStatusToAllPlayers()
+	if isGameOver {
+		return
+	}
 
+	g.startNightPhase()
 }

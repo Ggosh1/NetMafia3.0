@@ -1,7 +1,6 @@
 package GameFiles
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -17,24 +16,47 @@ func (g *Game) startNightPhase() {
 func (g *Game) EndNightPhase() {
 	log.Println("Ending night phase. Starting new day.")
 
-	for _, player := range g.Players {
-		if player.IsAlive {
-			player.NightAction(g.Players)
+	g.ExecuteNightActions()
+
+	var maxVotesCnt int = 0
+	var playerWithMaxVotes string = ""
+
+	for player, cnt := range g.GetVotesMap() {
+		if cnt > maxVotesCnt {
+			maxVotesCnt = cnt
+			playerWithMaxVotes = player
+		} else if cnt == maxVotesCnt {
+			playerWithMaxVotes = ""
 		}
 	}
-	/*if gameOver, winner := checkGameOver(); gameOver {
-		log.Println(winner)
-		broadcastWinner(winner)
-		game.GameStarted = false
+
+	if maxVotesCnt >= (g.GetMafiaCnt()+1)/2 && playerWithMaxVotes != "" {
+		player, err := g.GetPlayer(playerWithMaxVotes)
+		if err != nil {
+			return
+		}
+		g.KillPlayer(player.ID, mafiaVoting)
+	}
+
+	isGameOver, _ := g.CheckGameOver()
+	g.ResetVotes()
+	g.BroadcastGameStatusToAllPlayers()
+	if isGameOver {
 		return
 	}
-	game.DayNumber++
-	StartDayPhase()*/
+
+	g.StartDayPhase()
 }
 
 func (g *Game) ExecuteNightActions() {
-	fmt.Println("night phase begins...")
+	log.Printf("Executing night actions for %d players", len(g.Players))
+
 	for _, player := range g.Players {
-		player.NightAction(g.Players)
+		target, err := g.GetPlayer(player.Target)
+		if err != nil {
+			//log.Printf("Не найдена цель: " + err.Error())
+			continue
+		}
+		player.NightAction(player, target, g)
 	}
 }

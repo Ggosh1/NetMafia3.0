@@ -50,9 +50,8 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	room.Game.BroadcastGameStatusToAllPlayers()
-	room.Game.BroadcastGameStatusToAllPlayers()
 	// Отправляем начальное состояние (например, список игроков)
-	game.Mutex.Lock()
+	room.Game.Mutex.Lock()
 	// История чата
 	if err := conn.WriteJSON(struct {
 		Type    string                  `json:"type"`
@@ -63,25 +62,29 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Printf("Ошибка отправки истории чата игроку %s: %v", playerID, err)
 	}
-	game.Mutex.Unlock()
+	room.Game.Mutex.Unlock()
+
+	log.Printf("Читаем игрока %s", playerID)
 
 	// Чтение сообщений от игрока
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("Player %s disconnected: %v", playerID, err)
-			game.Mutex.Lock()
+			room.Game.Mutex.Lock()
 			// При разрыве соединения сбрасываем Conn, но не удаляем игрока
-			if p, ok := game.Players[playerID]; ok {
+			if p, ok := room.Game.Players[playerID]; ok {
 				p.Conn = nil
 			}
-			game.Mutex.Unlock()
+			room.Game.Mutex.Unlock()
 
-			room.Game.BroadcastGameStatus(playerID)
+			room.Game.BroadcastGameStatusToAllPlayers()
 			break
 		}
 		log.Printf("Message from %s: %s", playerID, string(message))
 
 		room.Game.ProcessMessage(playerID, message)
+
+		room.Game.BroadcastGameStatusToAllPlayers()
 	}
 }
