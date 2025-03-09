@@ -17,7 +17,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t mafia .
+          DOCKER_BUILDKIT=0 docker build -t mafia .
 
       - name: Docker Compose Up
         run: |
