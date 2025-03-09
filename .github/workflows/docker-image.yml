@@ -1,0 +1,24 @@
+name: Docker Build & Run
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-run:
+    runs-on: self-hosted  # ключевое слово, чтобы запустить на вашем self-hosted раннере
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t mafia .
+
+      - name: Docker Compose Up
+        run: |
+          docker compose up -d
