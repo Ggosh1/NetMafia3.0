@@ -1,5 +1,5 @@
 # Этап сборки: используем официальный образ Go для компиляции приложения
-FROM golang:1.20-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Отключаем cgo на уровне окружения
 ENV CGO_ENABLED=0
