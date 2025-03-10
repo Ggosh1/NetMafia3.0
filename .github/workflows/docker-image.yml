@@ -1,6 +1,6 @@
 name: Docker Build & Run
 
-on:
+on: 
   push:
     branches:
       - main
