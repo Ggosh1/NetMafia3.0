@@ -13,6 +13,12 @@ services:
   mafia:
     build: .
     container_name: mafia_app
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123
+      DB_NAME: postgres
     ports:
       - "8080:8080"
     depends_on:
