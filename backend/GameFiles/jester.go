@@ -10,7 +10,15 @@ func (j *JesterRole) HaveNightAction() bool {
 }
 
 func (j *JesterRole) NightAction(owner, target *Player, game *Game) {
-	log.Printf("Villager %s does nothing at night\n", owner.ID)
+	log.Printf("Jester %s does nothing at night\n", owner.ID)
+}
+
+func (j *JesterRole) HaveDayAction() bool {
+	return false
+}
+
+func (j *JesterRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Jester %s does nothing at night\n", owner.ID)
 }
 
 func (j *JesterRole) GetRussianName() string { return "Шут" }

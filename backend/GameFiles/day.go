@@ -14,6 +14,8 @@ func (g *Game) StartDayPhase() {
 func (g *Game) EndDayPhase() {
 	log.Println("Ending day phase. Processing votes...")
 
+	g.ExecuteDayActions()
+
 	var maxVotesCnt int = 0
 	var playerWithMaxVotes string = ""
 
@@ -36,10 +38,25 @@ func (g *Game) EndDayPhase() {
 
 	isGameOver, _ := g.CheckGameOver()
 	g.ResetVotes()
+	g.ResetProtect()
+	//g.ResetTarget()
 	g.BroadcastGameStatusToAllPlayers()
 	if isGameOver {
 		return
 	}
 
 	g.startNightPhase()
+}
+
+func (g *Game) ExecuteDayActions() {
+	log.Printf("Executing day actions for %d players", len(g.Players))
+
+	for _, player := range g.Players {
+		target, err := g.GetPlayer(player.Target)
+		if err != nil {
+			//log.Printf("Не найдена цель: " + err.Error())
+			continue
+		}
+		player.DayAction(player, target, g)
+	}
 }

@@ -13,6 +13,14 @@ func (w *WolfRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Wolf %s does nothing at night\n", owner.ID)
 }
 
+func (w *WolfRole) HaveDayction() bool {
+	return false
+}
+
+func (w *WolfRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Wolf %s does nothing at day\n", owner.ID)
+}
+
 func (w *WolfRole) GetRussianName() string { return "Волк" }
 
 func (w *WolfRole) GetTeam() Team { return mafia }

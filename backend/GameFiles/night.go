@@ -40,6 +40,8 @@ func (g *Game) EndNightPhase() {
 
 	isGameOver, _ := g.CheckGameOver()
 	g.ResetVotes()
+	g.ResetProtect()
+	//g.ResetTarget()
 	g.BroadcastGameStatusToAllPlayers()
 	if isGameOver {
 		return

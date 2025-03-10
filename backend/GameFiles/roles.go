@@ -3,7 +3,9 @@ package GameFiles
 // Интерфейс для ролевых действий
 type Role interface {
 	HaveNightAction() bool
-	NightAction(owner, target *Player, game *Game) // Ночное действие
+	NightAction(owner, target *Player, game *Game)
+	HaveDayAction() bool
+	DayAction(owner, target *Player, game *Game)
 	GetRussianName() string
 	GetTeam() Team
 	NeedTarget(phase Phase) bool

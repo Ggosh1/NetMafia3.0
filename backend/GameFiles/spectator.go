@@ -11,6 +11,13 @@ func (s *SpectatorRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Spectator %s does nothing at night\n", owner.ID)
 }
 
+func (s *SpectatorRole) HaveDayAction() bool {
+	return false
+}
+func (s *SpectatorRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Spectator %s does nothing at day\n", owner.ID)
+}
+
 func (s *SpectatorRole) GetRussianName() string {
 	return "Зритель"
 }

@@ -15,6 +15,14 @@ func (s *ScreamerRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Screamer %s does nothing at night\n", owner.ID)
 }
 
+func (s *ScreamerRole) HaveDayAction() bool {
+	return false
+}
+
+func (s *ScreamerRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Screamer %s does nothing at day\n", owner.ID)
+}
+
 func (s *ScreamerRole) GetRussianName() string { return "Крикун" }
 
 func (s *ScreamerRole) GetTeam() Team { return villager }

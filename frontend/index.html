@@ -377,18 +377,13 @@
     function updatePlayerGrid(playerStatus) {
         const playerGrid = document.getElementById("player-grid");
         playerGrid.innerHTML = "";
-        const targetedPlayerID = playerStatus.targetedScreamPlayer || null;
         Object.entries(playerStatus).forEach(([playerID, isAlive]) => {
-            if (playerID === "targetedScreamPlayer" || playerID === "targetedSunFlowermPlayer") return;
             const playerCard = document.createElement("div");
             playerCard.classList.add("player-card");
             playerCard.classList.add(isAlive ? "alive" : "dead");
 
             if (selectedPlayerID === playerID && isAlive) {
                 playerCard.classList.add("selected");
-            }
-            if (playerID === targetedPlayerID && isAlive) {
-                playerCard.classList.add("targeted");
             }
             playerCard.innerHTML = `
           <div class="player-avatar"></div>
@@ -401,6 +396,12 @@
                 voteSign.classList.add("vote-sign");
                 voteSign.textContent = "⚔️ " + votedFor + " ⚔️";
                 playerCard.appendChild(voteSign);
+            }
+            if (targetPlayerID === playerID){
+                const targetSign = document.createElement("div");
+                targetSign.classList.add("target-sign");
+                targetSign.textContent = "🎯";
+                playerCard.appendChild(targetSign);
             }
             if (isAlive) {
                 playerCard.onclick = () => handleVoteClick(playerID, isAlive);

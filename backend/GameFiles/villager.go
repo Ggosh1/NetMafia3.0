@@ -13,6 +13,14 @@ func (v *VillagerRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Villager %s does nothing at night\n", owner.ID)
 }
 
+func (v *VillagerRole) HaveDayction() bool {
+	return false
+}
+
+func (v *VillagerRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Villager %s does nothing at day\n", owner.ID)
+}
+
 func (v *VillagerRole) GetRussianName() string { return "Мирный житель" }
 
 func (v *VillagerRole) GetTeam() Team { return villager }

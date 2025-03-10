@@ -21,6 +21,14 @@ func (s *SeerRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Seer %s asks %s\n role", owner.ID, target.ID)
 }
 
+func (s *SeerRole) HaveDayAction() bool {
+	return false
+}
+
+func (s *SeerRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Seer %s does nothing at day\n", owner.ID)
+}
+
 func (s *SeerRole) GetRussianName() string { return "Провидец" }
 
 func (s *SeerRole) GetTeam() Team { return villager }

@@ -18,6 +18,14 @@ func (d *DoctorRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Doctor %s protects %s\n", owner.ID, target.ID)
 }
 
+func (d *DoctorRole) HaveDayAction() bool {
+	return false
+}
+
+func (d *DoctorRole) DayAction(owner, target *Player, game *Game) {
+	log.Printf("Doctor does nothing ar day \n")
+}
+
 func (d *DoctorRole) GetRussianName() string { return "Доктор" }
 
 func (d *DoctorRole) GetTeam() Team { return villager }

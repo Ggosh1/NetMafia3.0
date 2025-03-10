@@ -60,6 +60,18 @@ func (g *Game) StartGame(playerID string) {
 		return
 	}
 
+	if len(g.Players) > 16 {
+		//log.Println("зашел сюда")
+		errorMessage, _ := json.Marshal(struct {
+			Error string `json:"error"`
+		}{
+			Error: "Too many players to start the GameFiles",
+		})
+		g.Players[playerID].Conn.WriteMessage(websocket.TextMessage, errorMessage)
+		//http.Error(w, "Not enough players to start the GameFiles", http.StatusBadRequest)
+		return
+	}
+
 	log.Println("3тест")
 
 	//game.Roles = generateRoles(len(game.Players))
@@ -108,12 +120,14 @@ func (g *Game) assignRoles() {
 }
 
 func (g *Game) GenerateRoles(playerCount int) []Role {
-	var roles []Role
-	switch playerCount {
-	case 4:
-		roles = []Role{&AlphaWolfRole{}, &SeerRole{}, &JesterRole{}, &ScreamerRole{}}
+	var roles []Role = []Role{
+		&AlphaWolfRole{},
+		&SeerRole{},
+		&FlowerChildRole{},
+		&ScreamerRole{},
 	}
-	return roles
+
+	return roles[:playerCount]
 }
 
 func (g *Game) ShuffleRoles(roles []Role) []Role {
@@ -160,4 +174,16 @@ func (g *Game) KillPlayer(playerID string, dieType DieType) {
 		}
 	}
 	player.Die(dieType)
+}
+
+func (g *Game) ResetProtect() {
+	for _, player := range g.Players {
+		player.IsProtected = false
+	}
+}
+
+func (g *Game) ResetTarget() {
+	for _, player := range g.Players {
+		player.Target = ""
+	}
 }

@@ -154,16 +154,18 @@ func (p *Player) JoinRoom(roomID string) error {
 		return errors.New("roomID не может быть пустым")
 	}
 
-	if p.InRoom {
+	if p.InRoom && p.RoomID != roomID {
 		return errors.New("игрок уже находится в комнате")
 	}
 
-	// Если ResetPlayer изменяет поля, связанные с состоянием игрока,
-	// его следует вызывать под мьютексом.
-	p.ResetPlayer()
+	if p.RoomID == "" {
+		// Если ResetPlayer изменяет поля, связанные с состоянием игрока,
+		// его следует вызывать под мьютексом.
+		p.ResetPlayer()
 
-	p.RoomID = roomID
-	p.InRoom = true
+		p.RoomID = roomID
+		p.InRoom = true
+	}
 
 	return nil
 }
@@ -178,5 +180,11 @@ func (p *Player) AddChatMessage(message ChatMessage) {
 func (p *Player) ChooseTarget(id string) {
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
-	p.Target = id
+
+	if p.Target == id {
+		p.Target = ""
+	} else {
+		p.Target = id
+
+	}
 }
