@@ -13,7 +13,7 @@ func (w *WolfRole) NightAction(owner, target *Player, game *Game) {
 	log.Printf("Wolf %s does nothing at night\n", owner.ID)
 }
 
-func (w *WolfRole) HaveDayction() bool {
+func (w *WolfRole) HaveDayAction() bool {
 	return false
 }
 

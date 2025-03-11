@@ -121,10 +121,22 @@ func (g *Game) assignRoles() {
 
 func (g *Game) GenerateRoles(playerCount int) []Role {
 	var roles []Role = []Role{
-		&AlphaWolfRole{},
+		&AlphaWolfRole{}, //1 волк
 		&SeerRole{},
-		&FlowerChildRole{},
+		&JesterRole{},
+		&DoctorRole{}, // 4 игрока
 		&ScreamerRole{},
+		&FlowerChildRole{},
+		&WolfRole{}, //2 волка 7 игроков
+		&VillagerRole{},
+		&VillagerRole{},
+		&WolfRole{}, // 3 волка 10 игроков
+		&VillagerRole{},
+		&VillagerRole{},
+		&VillagerRole{},
+		&VillagerRole{},
+		&WolfRole{}, // 4 волка 15 игроков
+		&VillagerRole{},
 	}
 
 	return roles[:playerCount]
