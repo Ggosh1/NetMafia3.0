@@ -4,17 +4,15 @@ import "fmt"
 
 // Room представляет игровую комнату с идентификатором и игрой
 type Room struct {
-	ID      string
-	Game    *Game
-	Players map[string]*Player
+	ID   string
+	Game *Game
 }
 
 // NewRoom создаёт новую комнату с заданным идентификатором и инициализирует карту игроков
 func NewRoom(id string) *Room {
 	return &Room{
-		ID:      id,
-		Players: make(map[string]*Player),
-		Game:    NewGame(),
+		ID:   id,
+		Game: NewGame(),
 	}
 }
 
