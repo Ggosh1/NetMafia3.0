@@ -51,7 +51,7 @@ func (rm *RoomManager) GetRoom(id string) (*Room, error) {
 	return room, nil
 }
 
-// DeleteRoom удаляет комнату из менеджера
+// удаляет комнату из менеджера
 func (rm *RoomManager) DeleteRoom(id string) error {
 	rm.Mutex.Lock()
 	defer rm.Mutex.Unlock()
@@ -113,6 +113,27 @@ func (rm *RoomManager) AddPlayerToRoom(roomID, playerID string) error {
 
 	return nil
 }
+
+func (rm *RoomManager) RemovePlayerFromRoom(roomID, playerID string) {
+	room, err := rm.GetRoom(roomID)
+	if err != nil {
+		log.Printf("Комната не найдена %s\n", roomID)
+		return
+	}
+
+	if _, exists := room.Game.Players[playerID]; !exists {
+		log.Printf("Игрок %s не найден в комнате %s\n", playerID, room.ID)
+		return
+	}
+	room.Game.RemovePlayer(playerID)
+	log.Printf("Игрок %s удалён из комнаты %s\n", playerID, room.ID)
+
+	if len(room.Game.Players) == 0 {
+		rm.DeleteRoom(roomID)
+		log.Printf("Комната удалена %s\n", roomID)
+	}
+}
+
 func (rm *RoomManager) GetRooms() []*Room {
 	rooms := make([]*Room, 0, len(rm.Rooms))
 	for _, room := range rm.Rooms {

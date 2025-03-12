@@ -27,21 +27,33 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 
 	_, winnermsg := g.CheckGameOver()
 
+	var list []string = make([]string, 0)
+	if player.GetTeam() == mafia {
+		list = g.GetMafiaList()
+	}
+
+	var votedForMap map[string]string = make(map[string]string)
+	if player.GetTeam() == mafia && g.CurrentPhase == night || g.CurrentPhase == day {
+		votedForMap = g.GetPlayerVotes()
+	}
+
 	status := struct {
-		Phase                   string          `json:"phase"`
-		Winner                  string          `json:"winner"`
-		Players                 map[string]bool `json:"players"`
-		TargetedScreamPlayer    string          `json:"targeted_scream_player,omitempty"`
-		TargetedSunFlowerPlayer string          `json:"targeted_sun_flower_player,omitempty"`
-		TimeRemaining           int             `json:"time_remaining"`
-		Votes                   map[string]int  `json:"votes"`
-		PlayerVote              string          `json:"player_vote"`
-		Target                  string          `json:"target"`
-		CanStartGame            bool            `json:"can_start_game"`
-		IsHacked                bool            `json:"hacked"`
-		PlayerRole              string          `json:"role"`
-		HaveNightAction         bool            `json:"have_night_action"`
-		NeedToChooseTarget      bool            `json:"need_to_choose_target"`
+		Phase                   string            `json:"phase"`
+		Winner                  string            `json:"winner"`
+		Players                 map[string]bool   `json:"players"`
+		TargetedScreamPlayer    string            `json:"targeted_scream_player,omitempty"`
+		TargetedSunFlowerPlayer string            `json:"targeted_sun_flower_player,omitempty"`
+		TimeRemaining           int               `json:"time_remaining"`
+		Votes                   map[string]int    `json:"votes"`
+		PlayerVote              string            `json:"player_vote"`
+		Target                  string            `json:"target"`
+		CanStartGame            bool              `json:"can_start_game"`
+		IsHacked                bool              `json:"hacked"`
+		PlayerRole              string            `json:"role"`
+		HaveNightAction         bool              `json:"have_night_action"`
+		NeedToChooseTarget      bool              `json:"need_to_choose_target"`
+		MafiaList               []string          `json:"mafia_list"`
+		PlayersVotedFor         map[string]string `json:"players_voted_for"`
 	}{
 		Phase:         string(g.CurrentPhase),
 		Winner:        winnermsg,
@@ -55,6 +67,8 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 		PlayerRole:         player.GetRussianName(),
 		HaveNightAction:    player.HaveNightAction(),
 		NeedToChooseTarget: player.NeedTarget(g.CurrentPhase),
+		MafiaList:          list,
+		PlayersVotedFor:    votedForMap,
 	}
 
 	//log.Printf("Игрок %s голосует за %s", player.ID, player.VotedFor)
