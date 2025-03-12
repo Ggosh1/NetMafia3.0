@@ -1,0 +1,260 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: Arial, sans-serif;
+    transition: background-color 0.5s ease, color 0.5s ease;
+    height: 100%;
+    width: 100%;
+}
+body.night {
+    background-color: #2c3e50; /* Темный фон для ночи */
+    color: #ecf0f1; /* Светлый текст */
+}
+/* Главный контейнер – делим экран на две колонки: слева чат, справа сетка */
+.container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+/* Левая панель с чатом */
+.chat-container {
+    display: flex;
+    max-width: 400px;
+    width: 100%;
+    background: #1d1f20;
+    flex-direction: column;
+    height: 100vh;
+}
+body.night .chat-container {
+    background-color: #34495e;
+}
+/* Заголовок чата */
+.chat-header {
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    color: #FFF;
+    font-size: 28px;
+    font-family: "Sigmar";
+    font-weight: 500;
+    background: #1d1f20;
+}
+/* Лог и сообщения */
+#log {
+    flex: 1;
+    background: #35383b;
+    overflow-y: auto;
+    max-height: 75vh;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    color: #fff;
+    font-size: 16px;
+    font-family: "Ubuntu";
+    font-weight: 600;
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+body.night #log {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+}
+/* Отображение роли и таймера */
+#role-display,
+#timer {
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    background: #1d1f20;
+    color: #a181f6;
+    text-shadow: 2px 5px 5px rgba(97, 45, 255, .8);
+}
+#role-display {
+    color: #a181f6;
+    font-family: "Ubuntu";
+    font-size: 16px;
+    background: #1d1f20;
+    font-weight: 600;
+    transition: color 0.5s ease;
+}
+body.night #role-display {
+    color: #ecf0f1;
+}
+/* Чат */
+#chat-controls {
+    display: flex;
+    gap: 10px;
+    background: #1d1f20;
+    padding: 10px;
+}
+#chat-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #35383b;
+    font-size: 14px;
+    border: 2px solid #a181f6;
+    outline: none;
+    color: #FFF;
+    font-family: "Ubuntu";
+    font-size: 14px;
+    font-weight: 600;
+}
+#chat-input::placeholder{
+    font-family: "Ubuntu";
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFF;
+}
+#chat-controls button {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-family: "Ubuntu";
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFF;
+    border: none;
+    border-radius: 5px;
+    background: #7653e2;
+    cursor: pointer;
+}
+.send__game__button{
+    background: #7653e2;
+}
+#chat-controls button:hover {
+    box-shadow: 0 0 16px 5px rgba(97, 45, 255, .8);
+    transition: all linear 0.3s;
+}
+/* Контейнер для кнопок внизу */
+.bottom-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #1d1f20;
+    transition: all linear 0.3s;
+    padding: 10px;
+}
+.lobby{
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    background: url(../img/forest.png);
+    background-size: cover;
+    background-position: center;
+    align-items: center;
+    background-repeat: no-repeat;
+}
+.startGame{
+    width: 100%;
+    height: 40px;
+    background: #7653e2;
+    font-family: "Ubuntu";
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    color: #FFF;
+    border-radius:5px;
+}
+/* Отдельные контейнеры для игровых и таргетных кнопок */
+
+.choose__button{
+    width: 100%;
+    height: 40px;
+    background: #7653e2;
+    font-family: "Ubuntu";
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFF;
+    border: none;
+    border-radius: 5px;
+}
+.startGame:hover, .choose__button
+ {
+    transition: all linear 0.3s;
+    box-shadow: 0 0 16px 5px rgba(97, 45, 255, .8);
+}
+/* Правая панель с сеткой игроков */
+.player-grid-container {
+    width: 841px;
+    margin-left: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    grid-gap: 20px;
+}
+#player-grid {
+    display: grid;
+    width: 100vw;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, auto);
+    gap: 10px;
+    max-width: 1200px;
+}
+/* Карточки игроков */
+.player-card {
+    background: #fff;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    color: #000;
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+body.night .player-card {
+    background: #34495e;
+    color: #ecf0f1;
+}
+.player-card.alive {
+    border-color: green;
+}
+.player-card.dead {
+    border-color: red;
+    opacity: 1;
+}
+.player-avatar {
+    width: 80px;
+    height: 80px;
+    background-color: #ddd;
+    border-radius: 50%;
+    margin: 10px auto;
+}
+
+.player-name {
+    font-weight: bold;
+}
+.player-card.selected {
+    border-color: blue;
+    box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
+}
+.player-card.dead.selected {
+    border-color: red;
+    box-shadow: none;
+}cd 
+.player-card.targeted {
+    border-color: orange;
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
+}
+/* Кнопка выхода */
+#exitBtn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: #7653e2;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 100;
+    transition: all linear 0.3s;
+}
+#exitBtn:hover {
+    transition: all linear 0.3s;
+    box-shadow: 0 0 16px 5px rgba(97, 45, 255, .8);
+}
