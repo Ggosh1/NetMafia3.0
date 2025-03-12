@@ -67,6 +67,12 @@
         // Извлекаем имя пользователя из параметров URL
         const params = new URLSearchParams(window.location.search);
         const username = params.get("id") || "Player";
+        fetch('/availablerooms', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
 
         function handleCreateRoom() {
             const roomId = prompt("Введите id комнаты:");

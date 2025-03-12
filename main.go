@@ -26,6 +26,7 @@ func main() {
 	http.HandleFunc("/joinroombyid", backend.JoinRoomByIDHandler)
 	http.HandleFunc("/createroom", backend.CreateRoomHandler)
 	http.HandleFunc("/leaveroom", backend.LeaveRoomHandler)
+	http.HandleFunc("/availablerooms", backend.AvailableRoomsHandler)
 	// Раздача статических файлов (css, js, картинки)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./frontend/static"))))
 

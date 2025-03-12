@@ -281,6 +281,27 @@ func ServeWelcome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./frontend/welcome.html")
 }
 
+func AvailableRoomsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var roomsList []struct {
+		RoomID     string `json:"roomID"`
+		PlayersCnt int    `json:"playersCnt"`
+	}
+
+	for _, room := range roomManager.GetRoomsList() {
+		roomsList = append(roomsList, struct {
+			RoomID     string `json:"roomID"`
+			PlayersCnt int    `json:"playersCnt"`
+		}{
+			RoomID:     room.ID,
+			PlayersCnt: len(room.Game.Players),
+		})
+	}
+
+	log.Printf("Available Rooms: %v", roomsList)
+	json.NewEncoder(w).Encode(roomsList)
+}
 func ServeGame(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./frontend/index.html")
 }
