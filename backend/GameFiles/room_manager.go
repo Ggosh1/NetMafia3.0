@@ -113,3 +113,33 @@ func (rm *RoomManager) AddPlayerToRoom(roomID, playerID string) error {
 
 	return nil
 }
+func (rm *RoomManager) GetRooms() []*Room {
+	rooms := make([]*Room, 0, len(rm.Rooms))
+	for _, room := range rm.Rooms {
+		rooms = append(rooms, room)
+	}
+	return rooms
+
+}
+func (rm *RoomManager) GetRoomsList() []*Room {
+	var rooms []*Room
+	for _, room := range rm.Rooms {
+		rooms = append(rooms, room)
+	}
+	return rooms
+}
+
+func (rm *RoomManager) GetBestRoom() *Room {
+	var bestRoom *Room = nil
+	for _, room := range rm.Rooms {
+		if len(room.Game.Players) == 16 {
+			continue
+		}
+
+		if bestRoom == nil || len(room.Game.Players) > len(bestRoom.Game.Players) {
+			bestRoom = room
+		}
+	}
+
+	return bestRoom
+}

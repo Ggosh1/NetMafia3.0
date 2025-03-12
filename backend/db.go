@@ -57,10 +57,23 @@ func InitDB() {
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		username TEXT UNIQUE NOT NULL,
-		password TEXT NOT NULL
+		password TEXT NOT NULL,
+		
+		session_id TEXT UNIQUE
 	);
 	`
 	if _, err := Db.Exec(createTableQuery); err != nil {
 		log.Fatal("Ошибка создания таблицы:", err)
+	}
+	createFriendsTableQuery := `
+ 	CREATE TABLE IF NOT EXISTS friends (
+ 	    id SERIAL PRIMARY KEY,
+ 	    user_username TEXT NOT NULL,
+ 	    friend_username TEXT NOT NULL,
+ 	    UNIQUE(user_username, friend_username)
+ 	);
+ `
+	if _, err := Db.Exec(createFriendsTableQuery); err != nil {
+		log.Fatal("Ошибка создания таблицы друзей:", err)
 	}
 }

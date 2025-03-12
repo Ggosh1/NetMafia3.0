@@ -2,167 +2,44 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/static/css/reset.css">
+  <link rel="stylesheet" href="/static/css/registration.css">
+  <link rel="stylesheet" href="/static/css/popup.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Sigmar&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
   <title>Добро пожаловать в Mafia Game</title>
-  <style>
-    /* Стили для страницы регистрации/входа */
-    body {
-      font-family: Arial, sans-serif;
-      background: #34495e;
-      color: #ecf0f1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .auth-container {
-      background: #2c3e50;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      width: 300px;
-      text-align: center;
-    }
-    .auth-container h1 {
-      margin-bottom: 20px;
-      font-size: 28px;
-    }
-    .auth-container input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    .auth-container button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 5px;
-      background: #007bff;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .auth-container button:hover {
-      background: #0056b3;
-    }
-    .toggle-auth {
-      margin-top: 10px;
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
-<div class="auth-container">
-  <h1>Mafia Game</h1>
-  <form id="auth-form">
-    <input type="text" id="username" placeholder="Имя пользователя" required>
-    <input type="password" id="password" placeholder="Пароль" required>
-    <!-- Кнопки для входа и регистрации -->
-    <button type="button" id="login-btn">Войти</button>
-    <button type="button" id="register-btn" style="display:none;">Зарегистрироваться</button>
-  </form>
-  <div class="toggle-auth" id="toggle-auth">Нет аккаунта? Зарегистрироваться</div>
+<div class="overflow">
+  <div class="popup">
+    <div class="popup__text"></div>
+    <button class="button__popup"></button>
+  </div>
 </div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    console.log("DOM загружен, начинаем навешивать обработчики событий");
-
-    const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-    const toggleAuth = document.getElementById('toggle-auth');
-    let isLoginMode = true;
-
-    toggleAuth.addEventListener('click', () => {
-      isLoginMode = !isLoginMode;
-      console.log("Переключили режим. isLoginMode =", isLoginMode);
-      if (isLoginMode) {
-        loginBtn.style.display = 'block';
-        registerBtn.style.display = 'none';
-        toggleAuth.textContent = 'Нет аккаунта? Зарегистрироваться';
-      } else {
-        loginBtn.style.display = 'none';
-        registerBtn.style.display = 'block';
-        toggleAuth.textContent = 'Уже есть аккаунт? Войти';
-      }
-    });
-
-    function registerUser() {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      console.log("Нажата регистрация. username:", username, "password:", password);
-      if (!username || !password) {
-        alert('Введите имя и пароль');
-        return;
-      }
-      fetch('/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: username, password: password })
-      })
-              .then(response => {
-                console.log("Ответ от /register:", response.status);
-                if (!response.ok) {
-                  return response.text().then(text => { throw new Error(text); });
-                }
-                return response.json();
-              })
-              .then(data => {
-                console.log("Данные от /register:", data);
-                alert(data.message);
-                window.location.href = '/profile?id=' + encodeURIComponent(username);
-              })
-              .catch(error => {
-                console.error("Ошибка регистрации:", error);
-                alert('Ошибка: ' + error.message);
-              });
-    }
-
-    function loginUser() {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      console.log("Нажата вход. username:", username, "password:", password);
-      if (!username || !password) {
-        alert('Введите имя и пароль');
-        return;
-      }
-      fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: username, password: password })
-      })
-              .then(response => {
-                console.log("Ответ от /login:", response.status);
-                if (!response.ok) {
-                  return response.json().then(data => { throw new Error(data.error); });
-                }
-                return response.json();
-              })
-              .then(data => {
-                console.log("Данные от /login:", data);
-                alert(data.message);
-                window.location.href = '/profile?id=' + encodeURIComponent(username);
-              })
-              .catch(error => {
-                console.error("Ошибка входа:", error);
-                alert('Ошибка: ' + error.message);
-              });
-    }
-
-    registerBtn.addEventListener('click', registerUser);
-    loginBtn.addEventListener('click', loginUser);
-  });
-</script>
+<div class="registration">
+  <div class="registration__menu">
+    <button id="login" class="registration__menu__button active">Войти</button>
+    <button id="register" class="registration__menu__button">Регистрация</button>
+  </div>
+  <div class="registration__body">
+    <h2 class="registration__title">Mafia Game</h2>
+    <div class="forms__block">
+      <form id="loginBlock" class="block__inputs">
+        <input type="text" class="registration__input" placeholder="Логин" data-login>
+        <input type="text" class="registration__input" placeholder="Пароль" data-password>
+        <button type="submit" data-log class="auth__submit">Войти</button>
+      </form>
+      <form id="registBlock" class="block__inputs">
+        <input type="text" class="registration__input" placeholder="Логин" data-login>
+        <input type="text" class="registration__input" placeholder="Пароль" data-password>
+        <input type="text" class="registration__input" placeholder="Почта" data-email>
+        <button type="submit" data-regist class="auth__submit">Регистрация</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="/static/js/registration.js"></script>
 </body>
 </html>

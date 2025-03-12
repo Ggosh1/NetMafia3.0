@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 
 	"NetMafia3/backend"
+
 	_ "github.com/lib/pq"
 )
 
@@ -26,6 +27,16 @@ func main() {
 	http.HandleFunc("/joinroombyid", backend.JoinRoomByIDHandler)
 	http.HandleFunc("/createroom", backend.CreateRoomHandler)
 	http.HandleFunc("/leaveroom", backend.LeaveRoomHandler)
+	http.HandleFunc("/availablerooms", backend.AvailableRoomsHandler)
+	//профиль
+	http.HandleFunc("/rooms", backend.RoomsGame)
+	http.HandleFunc("/get-login", backend.GetLogin)
+	http.HandleFunc("/profile/role", backend.LeaveRoomHandler)
+	//друзья
+	http.HandleFunc("/get-list-friends", backend.GetFriendsHandler)
+	http.HandleFunc("/friends", backend.FriendsList)
+	http.HandleFunc("/friends-add", backend.AddFriendHandler)
+	http.HandleFunc("/friends-remove", backend.RemoveFriendHandler)
 	// Раздача статических файлов (css, js, картинки)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./frontend/static"))))
 

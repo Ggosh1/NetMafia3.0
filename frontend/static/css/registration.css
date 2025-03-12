@@ -1,0 +1,123 @@
+body {
+    background: #161819;
+    color: #ecf0f1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .registration{
+    max-width: 400px;
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+    background: #242628;
+    padding-top: 0px;
+    box-shadow: 0 0 16px 5px rgba(97, 45, 255, .8);
+    border-radius: 20px;
+    transition: all linear 0.3s;
+  }
+  .registration.active{
+    height: 435px;
+    transition: all linear 0.3s;
+  }
+  .registration__body{
+    padding: 30px;
+    background: #393b3d;
+    height: 100%;
+    border-radius: 0 0 18px 18px;
+    max-width: 100%;
+  }
+  .block__inputs{
+    margin-top: 40px;
+    grid-gap: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .auth__submit{
+    width: 100%;
+    height: 36px;
+    border-radius: 20px;
+    border: none;
+    margin-top: 30px;
+    background-color: #5521db;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: "Ubuntu";
+    transition: all .3s ease-in-out;
+  }
+  .auth__submit:hover{
+    transition: all .3s ease-in-out;
+    background: #612dff;
+    box-shadow: 0 0 18px 4px rgba(97, 45, 255, .8);
+  }
+  .registration__input{
+    width: 100%;
+    height: 40px;
+    font-size: 16px;
+    color: #919090;
+    outline: none;
+    padding-left: 15px;
+    border-radius: 10px;
+    border: 1px solid #03182c;
+    font-weight: 600;
+  }
+  .registration__input::placeholder {
+    color: #919090;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .registration__title{
+    font-family: "Sigmar";
+    color: #FFF;
+    font-size: 37px;
+    font-weight: 100;
+    text-align: center;
+    height: 40px;
+  }
+  .registration__menu{
+    display: flex;
+    width: 100%;
+
+  }
+  .forms__block{
+    display: flex;
+    width: 100%;
+    grid-gap: 40px;
+    position: relative;
+    width: 730px;
+    left: 0;
+    top: 0;
+    transition:all linear 0.3s;
+  }
+  .forms__block.active{
+    left: -387px;
+    top: 0px;
+    transition:all linear 0.3s;
+  }
+  .registration__menu__button{
+    max-width: 50%;
+    width: 100%;
+    font-family: "Ubuntu";
+    cursor: pointer;
+    font-size: 16px;
+    color: #FFF;
+    background: transparent;
+    font-weight: 600;
+    height: 43px;
+    transition: all linear 0.3s;
+    border: none;
+  }
+  .registration__menu__button.active{
+    background: #393b3d;
+    transition: all ease 0.3s;
+    border-radius: 18px 18px 0 0;
+    color: #FFF;
+  }
+  
