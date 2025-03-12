@@ -110,3 +110,21 @@ func (g *Game) PlayerCanVote(id string) bool {
 	}
 	return false
 }
+
+func (g *Game) GetMafiaList() []string {
+	var list []string
+	for _, p := range g.Players {
+		if p.GetTeam() == mafia {
+			list = append(list, string(p.ID))
+		}
+	}
+	return list
+}
+
+func (g *Game) GetPlayerVotes() map[string]string {
+	votes := map[string]string{}
+	for _, p := range g.Players {
+		votes[p.ID] = string(p.VotedFor)
+	}
+	return votes
+}

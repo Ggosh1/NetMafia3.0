@@ -30,7 +30,8 @@ func (r *Room) AddPlayer(player *Player) {
 	fmt.Printf("Игрок %s добавлен в комнату %s\n", player.ID, r.ID)
 }
 
-// RemovePlayer удаляет игрока из комнаты по его идентификатору.
+//	удаляет игрока из комнаты по его идентификатору.
+//
 // Если игрок не найден, выводится сообщение.
 func (r *Room) RemovePlayer(playerID string) {
 	if _, exists := r.Game.Players[playerID]; !exists {

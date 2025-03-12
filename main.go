@@ -23,8 +23,8 @@ func main() {
 	http.HandleFunc("/game", backend.ServeGame)       // Игровая страница
 	http.HandleFunc("/ws", backend.HandleConnections) // WebSocket соединения
 	http.HandleFunc("/status", backend.GameStatus)
-	http.HandleFunc("/joinroom", backend.JoinRoomHandler)
-	http.HandleFunc("/joinroombyid", backend.JoinRoomByIDHandler)
+	//http.HandleFunc("/joinroom", backend.JoinRoomHandler)
+	http.HandleFunc("/joinroombyid", backend.JoinRoomByIDHandler) //roomid = "" для получения лучшей комнаты
 	http.HandleFunc("/createroom", backend.CreateRoomHandler)
 	http.HandleFunc("/leaveroom", backend.LeaveRoomHandler)
 	http.HandleFunc("/availablerooms", backend.AvailableRoomsHandler)

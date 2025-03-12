@@ -82,9 +82,11 @@
 
     const players = {}; // Информация об игроках
     let currentVotes = {};
+    let playersVotedFor = {};
     const params = new URLSearchParams(window.location.search);
     const playerId = params.get("id");
     let endGame = false;
+    let mafia = {};
     if (!playerId) {
         alert("ID игрока не указан. Пожалуйста, заходите через страницу входа.");
     }
@@ -129,8 +131,14 @@
             updateRoleDisplay(message.role);
         }
 
-        if (message.team) {
-            log(`Роль выбранного игрока: ${message.team}`);
+        if (message.mafia_list){
+            //log(message.mafia_list)
+            mafia = message.mafia_list
+        }
+
+        if (message.players_voted_for) {
+            playersVotedFor = message.players_voted_for;
+            updatePlayerGrid(players);
         }
 
         if (message.error) {
@@ -144,7 +152,7 @@
                 document.body.classList.remove("night");
             } else if (message.phase === "gameover") {
                 isGameover = true
-                log(`Game over! ${message.winner}`);
+                //log(`Game over! ${message.winner}`);
                 alert(`Game over! ${message.winner}`);
                 leaveRoom()
             }
@@ -214,6 +222,20 @@
             if (isAlive) {
                 playerCard.onclick = () => handleVoteClick(playerID, isAlive);
             }
+            if (mafia.includes(playerID)){
+                const wolfSign = document.createElement("div");
+                wolfSign.classList.add("isMafia");
+                wolfSign.textContent = "🐺";
+                playerCard.appendChild(wolfSign);
+            }
+            if (playerID in playersVotedFor){
+                const voteSign = document.createElement("div");
+                voteSign.classList.add("VotedFor");
+                //log("пенис" + playersVotedFor[playerID])
+                voteSign.textContent = "voted for: " + playersVotedFor[playerID].toString() + " хуй"
+                //log("пизда" + playersVotedFor[playerID])
+                playerCard.appendChild(voteSign);
+            }
             playerGrid.appendChild(playerCard);
             players[playerID] = isAlive;
         });
@@ -257,7 +279,7 @@
         const input = document.getElementById("chat-input");
         const message = input.value.trim();
         if (message && ws && ws.readyState === WebSocket.OPEN) {
-            log("penis")
+            //log("penis")
             ws.send(JSON.stringify({ action: "chat", message }));
             input.value = "";
         } else if (!ws || ws.readyState !== WebSocket.OPEN) {

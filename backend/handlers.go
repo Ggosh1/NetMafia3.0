@@ -88,9 +88,13 @@ func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSONResponse(w, map[string]string{"error": "Некорректное тело запроса"}, http.StatusBadRequest)
 		return
 	}
-	if req.RoomID == "" {
+	if req.RoomID == "" && len(req.RoomID) == 0 {
 		writeJSONResponse(w, map[string]string{"error": "Не указан roomId"}, http.StatusBadRequest)
 		return
+	}
+
+	if req.RoomID == "" {
+		req.RoomID = roomManager.GetBestRoom().ID
 	}
 
 	log.Printf("Принят запрос на добавление игрока %s в комнату %s", login, req.RoomID)
@@ -182,7 +186,7 @@ func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Попытка получения комнаты %s", roomID)
 
-	room, err := roomManager.GetRoom(roomID)
+	_, err := roomManager.GetRoom(roomID)
 	if err != nil {
 		log.Printf("Ошибка при получении комнаты: %v", err)
 		http.Error(w, "Комната не найдена", http.StatusNotFound)
@@ -190,7 +194,7 @@ func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Удаление игрока %s из комнаты %s", playerID, roomID)
-	room.RemovePlayer(playerID)
+	roomManager.RemovePlayerFromRoom(roomID, playerID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
@@ -397,6 +401,8 @@ func ServeWelcome(w http.ResponseWriter, r *http.Request) {
 	query := u.Query()
 	query.Add("id", cookie.Value)
 	u.RawQuery = query.Encode()
+	id, err := getLoginBySession(cookie.Value)
+	roomManager.CreatePlayer(id)
 	http.Redirect(w, r, "/profile", http.StatusFound)
 }
 
