@@ -136,9 +136,7 @@ func (g *Game) ProcessMessage(playerID string, message []byte) bool {
 	case "start_game":
 		log.Printf("Player %s requested to start the GameFiles", playerID)
 		if g.GameStarted == false {
-			g.Mutex.Lock()
 			g.StartGame(playerID)
-			g.Mutex.Unlock()
 		}
 	case "chat":
 		g.broadcastChatMessage(playerID, msg.Message)
