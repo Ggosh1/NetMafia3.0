@@ -8,7 +8,7 @@ func (g *Game) StartDayPhase() {
 	log.Println("day phase started.")
 	g.BroadcastGameStatusToAllPlayers() // Рассылаем обновление о фазе всем клиентам
 	g.Mutex.Unlock()
-	g.startPhaseTimer(15, g.EndDayPhase)
+	g.startPhaseTimer(30, g.EndDayPhase)
 }
 
 func (g *Game) EndDayPhase() {
