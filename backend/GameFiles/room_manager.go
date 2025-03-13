@@ -41,9 +41,6 @@ func (rm *RoomManager) CreateRoom(id string) (*Room, error) {
 
 // GetRoom возвращает комнату по ID, если она существует.
 func (rm *RoomManager) GetRoom(id string) (*Room, error) {
-	rm.Mutex.Lock()
-	defer rm.Mutex.Unlock()
-
 	room, exists := rm.Rooms[id]
 	if !exists {
 		return nil, fmt.Errorf("комната с id %s не найдена", id)

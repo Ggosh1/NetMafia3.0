@@ -96,7 +96,9 @@ func (g *Game) BroadcastGameStatus(playerID string) {
 
 	//og.Printf("Сообщение от сервера игроку %s : %s", player.ID, status)
 
+	player.Mutex.Lock()
 	err = player.Conn.WriteMessage(websocket.TextMessage, data)
+	player.Mutex.Unlock()
 	if err != nil {
 		log.Printf("Не удалось отправить статус игры игроку %s: %v", player.ID, err)
 		// Здесь можно добавить дополнительную логику обработки, если нужно
