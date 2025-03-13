@@ -117,6 +117,20 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Принят запрос на создание комнаты %s", req.RoomID)
 
+	cookie, err := r.Cookie("session_id")
+	sessionID := cookie.Value
+	login, err := getLoginBySession(sessionID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	player, err := roomManager.GetPlayer(login)
+
+	if player.InRoom {
+		writeJSONResponse(w, map[string]string{"error": "Игрок уже в комнате"}, http.StatusMethodNotAllowed)
+		return
+	}
+
 	room, err := roomManager.CreateRoom(req.RoomID)
 
 	if err != nil {
@@ -126,16 +140,11 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("ID созданной комнаты %s", room.ID)
-	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		http.Error(w, "Не авторизован", http.StatusUnauthorized)
 		return
 	}
-	sessionID := cookie.Value
-	login, err := getLoginBySession(sessionID)
-	if err != nil {
-		fmt.Println(err)
-	}
+
 	roomManager.AddPlayerToRoom(room.ID, login)
 	writeJSONResponse(w, map[string]interface{}{
 		"roomId": room.ID,
