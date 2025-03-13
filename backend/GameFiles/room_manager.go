@@ -103,6 +103,10 @@ func (rm *RoomManager) AddPlayerToRoom(roomID, playerID string) error {
 		return fmt.Errorf("игрок с id %s не найден", playerID)
 	}
 
+	if room.Game.GameStarted {
+		return fmt.Errorf("Невозможно зайти в комнату, когда игра в ней уже началась")
+	}
+
 	// 3. Попытка присоединить игрока к комнате (на уровне структуры Player)
 	if err := player.JoinRoom(roomID); err != nil {
 		return fmt.Errorf("не удалось присоединить игрока %s к комнате %s: %v", playerID, roomID, err)
