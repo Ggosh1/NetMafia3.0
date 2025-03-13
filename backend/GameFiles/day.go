@@ -3,11 +3,9 @@ package GameFiles
 import "log"
 
 func (g *Game) StartDayPhase() {
-	g.Mutex.Lock()
 	g.CurrentPhase = day
 	log.Println("day phase started.")
 	g.BroadcastGameStatusToAllPlayers() // Рассылаем обновление о фазе всем клиентам
-	g.Mutex.Unlock()
 	g.startPhaseTimer(30, g.EndDayPhase)
 }
 

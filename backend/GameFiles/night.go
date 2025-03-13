@@ -5,11 +5,9 @@ import (
 )
 
 func (g *Game) startNightPhase() {
-	g.Mutex.Lock()
 	g.CurrentPhase = night
 	log.Println("night phase started.")
 	g.BroadcastGameStatusToAllPlayers() // Рассылаем обновление о фазе всем клиентам
-	g.Mutex.Unlock()
 	g.startPhaseTimer(30, g.EndNightPhase)
 }
 
