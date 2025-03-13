@@ -50,8 +50,10 @@ func (g *Game) broadcastChatMessageToPlayer(fromID, toID, chatMessage string) {
 
 	if err2 == nil {
 		toPlayer.AddChatMessage(msg)
-		if err := toPlayer.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			log.Printf("Failed to send chat message to player %s: %v", toPlayer.ID, err)
+		if toPlayer.Conn != nil {
+			if err := toPlayer.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("Failed to send chat message to player %s: %v", toPlayer.ID, err)
+			}
 		}
 	}
 }
