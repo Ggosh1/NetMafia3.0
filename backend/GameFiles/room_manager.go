@@ -100,7 +100,12 @@ func (rm *RoomManager) AddPlayerToRoom(roomID, playerID string) error {
 		return fmt.Errorf("игрок с id %s не найден", playerID)
 	}
 
+	if player.InRoom {
+		return fmt.Errorf("Игрок уже в комнате")
+	}
+
 	if room.Game.GameStarted {
+
 		return fmt.Errorf("Невозможно зайти в комнату, когда игра в ней уже началась")
 	}
 
