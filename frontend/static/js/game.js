@@ -11,6 +11,7 @@ yesBtn.addEventListener("click",()=>{
 })
 
 
+
 function handleExit() {
     const params = new URLSearchParams(window.location.search);
     const username = params.get("id");

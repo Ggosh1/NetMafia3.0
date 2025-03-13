@@ -51,13 +51,39 @@
     </div>
     <!-- Правая колонка (сетка игроков) -->
      <div class="lobby">
+        <img src="static/img/moon.png" alt="" class="moon">
+        <img src="static/img/sun.png" alt="" class="sun onTop">
+        
         <div class="player-grid-container">
             <div id="player-grid"></div>
         </div>
+
      </div>
 </div>
 
 <script>
+        const sun = document.querySelector('.sun');
+        const moon = document.querySelector('.moon');
+        let sunAngle = 90; 
+        let moonAngle = 270; 
+
+        function moveSunMoon(clockwise) {
+            sun.classList.remove('moveClockwise', 'moveCounterClockwise');
+            moon.classList.remove('moveClockwise', 'moveCounterClockwise');
+            sunAngle += 180; 
+            moonAngle += 180; 
+            if(sun.classList.contains("onTop")){
+                sun.style.transform = `translate(-50%, -50%) rotate(${sunAngle}deg) translateX(-700px) rotate(${sunAngle}deg)`;
+                moon.style.transform = `translate(-50%, -50%) rotate(${moonAngle}deg) translateX(-250px) rotate(${moonAngle}deg)`;
+                sun.classList.remove("onTop")
+            }else{
+                sun.style.transform = `translate(-50%, -50%) rotate(${sunAngle}deg) translateX(-250px) rotate(${sunAngle}deg)`;
+                moon.style.transform = `translate(-50%, -50%) rotate(${moonAngle}deg) translateX(-700px) rotate(${moonAngle}deg)`;
+                sun.classList.add("onTop")
+            }
+        }
+
+
     // Обработчик нажатия Enter для чата
     const input = document.getElementById("chat-input");
     input.addEventListener("keydown", function(event) {
@@ -65,11 +91,12 @@
             sendChatMessage();
         }
     });
+    
 
     // Закрытие WebSocket при закрытии вкладки
     window.addEventListener("beforeunload", function () {
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.close(1000, "Tab closed");
+            ws.close(500, "Tab closed");
         }
     });
 
@@ -79,7 +106,7 @@
     let needToChooseTarget = false; // Флаг, показывающий необходимость выбора цели
     let chooseTargetMode = false; // Флаг, показывающий режим выбора
     let targetPlayerID = "";
-
+    let flad = true
     const players = {}; // Информация об игроках
     let currentVotes = {};
     let playersVotedFor = {};
@@ -144,15 +171,23 @@
         if (message.error) {
             alert(`Ошибка: ${message.error}`);
         }
-
+        console.log(message.phase)
         if (message.phase) {
             if (message.phase === "night") {
-                document.body.classList.add("night");
+                if(flad){
+                    moveSunMoon(true)
+                    flad = false
+                    document.querySelector("body").classList.add("active")
+                } 
             } else if (message.phase === "day") {
-                document.body.classList.remove("night");
+                if(!flad){
+                    flad = true
+                    moveSunMoon(true)
+                    document.querySelector("body").classList.remove("active")
+                }
             } else if (message.phase === "gameover") {
+                document.querySelector("body").classList.remove("active")
                 isGameover = true
-                //log(`Game over! ${message.winner}`);
                 alert(`Game over! ${message.winner}`);
                 leaveRoom()
             }

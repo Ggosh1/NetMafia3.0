@@ -2,14 +2,12 @@ let createRoomButton = document.querySelector(".input_create__room")
 let joinButtonRoom = document.querySelector(".button__join")
 let popup = document.querySelector(".overflow");
 let popupButton = document.querySelector(".button__popup");
-let startGame = document.querySelector(".start__game")
 let tableRoomsButton = document.querySelector(".rooms__container")
 let allRoomsButtons = []
 let login;
 
 createRoomButton.addEventListener("click", handleCreateRoom)
 joinButtonRoom.addEventListener("click",handleJoinRoomByID)
-startGame.addEventListener("click",joinFastGame)
 popupButton.addEventListener("click", ()=>{popup.classList.remove("active")})
 document.addEventListener("DOMContentLoaded", getAllRooms);
 
@@ -59,29 +57,7 @@ function createButton(login, roomId, countPeople){
 
     return button;
 }
-function joinFastGame(){
-    fetch('#', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-    }).then(response => {
-        if (!response.ok) {
-            return response.json().then(errData => {
-                throw new Error(errData.error || `Ошибка: ${response.status} ${response.statusText}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        window.location.href = '/game?id=' + encodeURIComponent(data.login) + '&roomId=' + encodeURIComponent(data.roomId);
-    })
-    .catch(error => {
-        popup.classList.add("active")
-        popupButton.innerText = "Продолжить"
-        popup.querySelector(".popup__text").innerText = error.message
-    });
-}
+
 function handleCreateRoom() {
     let roomId = document.querySelector("#createRoom").value
     if (roomId !== null && roomId.trim() !== "") {

@@ -22,31 +22,6 @@ func writeJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) 
 	}
 }
 
-func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
-	playerID := r.URL.Query().Get("id")
-	if playerID == "" {
-		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
-		return
-	}
-
-	/*player, exists := game.Players[playerID]
-	if !exists {
-		player = &Player{
-			ID:      playerID,
-			IsAlive: true,
-		}
-		game.Players[playerID] = player
-		log.Printf("Создан новый игрок %s через joinRoomHandler", playerID)
-	}*/
-
-	/*room := joinRoom(player)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"roomId":  room.ID,
-		"players": len(room.Players),
-	})*/
-}
-
 type CreateRoomRequest struct {
 	RoomID string `json:"roomId"`
 }
@@ -88,7 +63,7 @@ func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSONResponse(w, map[string]string{"error": "Некорректное тело запроса"}, http.StatusBadRequest)
 		return
 	}
-	if req.RoomID == "" && len(req.RoomID) == 0 {
+	if req.RoomID == "" && len(roomManager.Rooms) == 0 {
 		writeJSONResponse(w, map[string]string{"error": "Не указан roomId"}, http.StatusBadRequest)
 		return
 	}
