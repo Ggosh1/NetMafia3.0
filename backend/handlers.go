@@ -81,6 +81,7 @@ func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
 	if err := roomManager.AddPlayerToRoom(req.RoomID, login); err != nil {
 		log.Printf("Ошибка при добавлении игрока %s в комнату %s: %v", login, req.RoomID, err)
 		writeJSONResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
+		http.Error(w, "Не получилось добавить", http.StatusBadRequest)
 		return
 	}
 
@@ -149,13 +150,13 @@ func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	playerID := r.URL.Query().Get("id")
 	if playerID == "" {
-		http.Error(w, "ID игрока не указан", http.StatusBadRequest)
+		//http.Error(w, "ID игрока не указан", http.StatusBadRequest)
 		return
 	}
 
 	roomID := r.URL.Query().Get("roomId")
 	if roomID == "" {
-		http.Error(w, "ID комнаты не указан", http.StatusBadRequest)
+		//http.Error(w, "ID комнаты не указан", http.StatusBadRequest)
 		return
 	}
 
@@ -164,7 +165,7 @@ func LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := roomManager.GetRoom(roomID)
 	if err != nil {
 		log.Printf("Ошибка при получении комнаты: %v", err)
-		http.Error(w, "Комната не найдена", http.StatusNotFound)
+		//http.Error(w, "Комната не найдена", http.StatusNotFound)
 		return
 	}
 
