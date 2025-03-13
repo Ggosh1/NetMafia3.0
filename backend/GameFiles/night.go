@@ -10,7 +10,7 @@ func (g *Game) startNightPhase() {
 	log.Println("night phase started.")
 	g.BroadcastGameStatusToAllPlayers() // Рассылаем обновление о фазе всем клиентам
 	g.Mutex.Unlock()
-	g.startPhaseTimer(15, g.EndNightPhase)
+	g.startPhaseTimer(30, g.EndNightPhase)
 }
 
 func (g *Game) EndNightPhase() {
