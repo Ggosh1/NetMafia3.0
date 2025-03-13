@@ -135,7 +135,9 @@ func (g *Game) ProcessMessage(playerID string, message []byte) bool {
 	switch msg.Action {
 	case "start_game":
 		log.Printf("Player %s requested to start the GameFiles", playerID)
-		go g.StartGame(playerID)
+		if g.GameStarted == false {
+			go g.StartGame(playerID)
+		}
 	case "chat":
 		g.broadcastChatMessage(playerID, msg.Message)
 	case "vote":
