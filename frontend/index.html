@@ -266,9 +266,7 @@
             if (playerID in playersVotedFor){
                 const voteSign = document.createElement("div");
                 voteSign.classList.add("VotedFor");
-                //log("пенис" + playersVotedFor[playerID])
-                voteSign.textContent = "voted for: " + playersVotedFor[playerID].toString() + " хуй"
-                //log("пизда" + playersVotedFor[playerID])
+                voteSign.textContent = "voted for: " + playersVotedFor[playerID].toString()
                 playerCard.appendChild(voteSign);
             }
             playerGrid.appendChild(playerCard);
