@@ -30,9 +30,6 @@ func (g *Game) StartGame(playerID string) {
 
 	log.Println("0тест")
 
-	g.Mutex.Lock()
-	g.Mutex.Unlock()
-
 	log.Println("1тест")
 
 	if g.GameStarted {
