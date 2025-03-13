@@ -31,7 +31,6 @@ func (g *Game) StartGame(playerID string) {
 	log.Println("0тест")
 
 	g.Mutex.Lock()
-	g.Mutex.Unlock()
 
 	log.Println("1тест")
 
@@ -85,6 +84,7 @@ func (g *Game) StartGame(playerID string) {
 
 	g.GameStarted = true
 	g.StartDayPhase()
+	g.Mutex.Unlock()
 }
 
 func (g *Game) startPhaseTimer(duration int, endPhaseFunc func()) {
