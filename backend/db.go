@@ -12,7 +12,8 @@ var Db *sql.DB
 
 func InitDB() {
 	//TODO: ПОМЕНЯТЬ host=db ДЛЯ РАБОТЫ В КОНТЕЙНЕРЕ
-	sysConnStr := "host=db port=5432 user=postgres password=123 dbname=postgres sslmode=disable"
+	dbHost := os.Getenv("DB_HOST")
+	sysConnStr := fmt.Sprintf("host=%s port=5432 user=postgres password=123 dbname=postgres sslmode=disable", dbHost)
 	sysDB, err := sql.Open("postgres", sysConnStr)
 	if err != nil {
 		log.Fatal("Ошибка подключения к системной БД:", err)
@@ -44,7 +45,8 @@ func InitDB() {
 	}
 
 	//TODO: ПОМЕНЯТЬ host=db ДЛЯ РАБОТЫ В КОНТЕЙНЕРЕ
-	targetConnStr := fmt.Sprintf("host=db port=5432 user=postgres password=123 dbname=%s sslmode=disable", targetDBName)
+	dbHost := os.Getenv("DB_HOST")
+	targetConnStr := fmt.Sprintf("host=%s port=5432 user=postgres password=123 dbname=postgres sslmode=disable", dbHost)
 	Db, err = sql.Open("postgres", targetConnStr)
 	if err != nil {
 		log.Fatal("Ошибка подключения к целевой базе данных:", err)
