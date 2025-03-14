@@ -30,6 +30,7 @@
 
 ```
 #.env
+
 POSTGRES_USER=your_postgres_user
 
 POSTGRES_PASSWORD=your_secure_password
