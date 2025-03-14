@@ -21,7 +21,7 @@
    ```bash
    git clone https://github.com/Ggosh1/NetMafia3.0.git
    cd NetMafia3.0
-```
+   ```
 
 **Настройте переменные окружения**
 
