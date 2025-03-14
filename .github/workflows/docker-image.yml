@@ -10,7 +10,7 @@ on:
 
 jobs: 
   build-and-run:
-    runs-on: self-hosted  # ключевое слово, чтобы запустить на вашем self-hosted раннере
+    runs-on:
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
