@@ -4,8 +4,8 @@ services:
     image: postgres:15
     container_name: mafia_db
     environment:
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWROD }}
+      POSTGRES_USER: ${ secrets.POSTGRES_USER }
+      POSTGRES_PASSWORD: ${ secrets.POSTGRES_PASSWROD }
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
