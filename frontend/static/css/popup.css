@@ -38,7 +38,7 @@
     font-size: 16px;
     padding: 0 10px;
   }
-  .overflow{
+  .overflow, .overflow1{
     width: 100%;
     height: 100%;
     position: fixed;
@@ -50,6 +50,6 @@
     display: none;
     justify-content: center;
   }
-  .overflow.active{
+  .overflow.active, .overflow1.active{
     display: flex;
   }

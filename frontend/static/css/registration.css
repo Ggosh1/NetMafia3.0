@@ -19,7 +19,7 @@ body {
     transition: all linear 0.3s;
   }
   .registration.active{
-    height: 435px;
+    height: 400px;
     transition: all linear 0.3s;
   }
   .registration__body{
@@ -120,4 +120,29 @@ body {
     border-radius: 18px 18px 0 0;
     color: #FFF;
   }
-  
+  .warning__message{
+    color: #c62d2d;
+    font-family: "Ubuntu";
+    display: block;
+    height: 13px;
+    font-size: 14px; 
+    text-shadow: 1px 1px 6px #c62d2d;
+  }
+  @media(max-width: 500px){
+    .registration{
+      max-width: 290px;
+
+    }
+    .registration__title{
+      font-size: 33px;
+    }
+    .registration__body{
+      padding: 20px 10px;
+    }
+    .forms__block{
+      width: 580px;
+    }
+    .forms__block.active {
+      left: -307px;
+    }
+  }
