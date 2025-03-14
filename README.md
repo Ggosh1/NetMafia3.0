@@ -9,9 +9,8 @@
 
 ## Требования
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
+- Docker
+- Docker Compose
 ## Установка и запуск
 
 1. **Клонируйте репозиторий**
