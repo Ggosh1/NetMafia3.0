@@ -46,7 +46,7 @@ func InitDB() {
 	}
 
 	//TODO: ПОМЕНЯТЬ host=db ДЛЯ РАБОТЫ В КОНТЕЙНЕРЕ
-	dbHost := os.Getenv("DB_HOST")
+	dbHost = os.Getenv("DB_HOST")
 	targetConnStr := fmt.Sprintf("host=%s port=5432 user=postgres password=123 dbname=postgres sslmode=disable", dbHost)
 	Db, err = sql.Open("postgres", targetConnStr)
 	if err != nil {
