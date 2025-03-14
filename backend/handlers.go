@@ -80,8 +80,8 @@ func JoinRoomByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := roomManager.AddPlayerToRoom(req.RoomID, login); err != nil {
 		log.Printf("Ошибка при добавлении игрока %s в комнату %s: %v", login, req.RoomID, err)
-		writeJSONResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		http.Error(w, "Не получилось добавить", http.StatusBadRequest)
+		//writeJSONResponse(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
