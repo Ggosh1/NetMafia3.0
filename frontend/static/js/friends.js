@@ -124,6 +124,7 @@ async function addFriend(event){
             return response.json();
         })
         .then(data => {
+            input.value =""
             popup.classList.add("active")
             popupButton.innerText = "Продолжить"
             popup.querySelector(".popup__text").innerText = data.message

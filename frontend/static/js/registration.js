@@ -31,7 +31,8 @@ window.addEventListener("load", ()=>{
             password = element.value
             element.value = "*".repeat(password.length) 
             if(password.length < 8){
-                
+                element.classList.remove("allowed")
+                element.closest(".block__inputs").querySelector(".warning__message").innerText= "Длина пароля должна быть больше 8 символов"
                 element.style.borderColor = "red";
                 element.style.borderWidth = "2px";
             }
@@ -39,12 +40,14 @@ window.addEventListener("load", ()=>{
                 element.classList.add("allowed")
                 element.style.borderColor = "#03182c";
                 element.style.borderWidth = "1px";
+                element.closest(".block__inputs").querySelector(".warning__message").innerText= ""
             }
         })
     })
     allLoginsInput.forEach((element) => {
         element.addEventListener("input", ()=>{
             if(element.value == ""){
+                element.classList.remove("allowed")
                 element.style.borderColor = "red";
                 element.style.borderWidth = "2px";
             } else{
@@ -58,14 +61,12 @@ window.addEventListener("load", ()=>{
         
         let passwordInput = document.querySelector("#registBlock").querySelector("[data-password]")
         let loginInput = document.querySelector("#registBlock").querySelector("[data-login]")
-        let EmailInput = document.querySelector("#registBlock").querySelector("[data-email]")
         e.preventDefault();
         if(passwordInput.classList.contains("allowed") && loginInput.classList.contains("allowed")){
             let password = passwordInput.value
             let username = loginInput.value.trim()
             passwordInput.value = ""
             loginInput.value = ""
-            EmailInput.value = ""
             fetch('/register', {
                   method: 'POST',
                   headers: {
@@ -81,7 +82,6 @@ window.addEventListener("load", ()=>{
                 return response.json();
             })
             .then(data => {
-                console.log("Данные от /register:", data);
                 popup.classList.add("active")
                 popupButton.innerText = "Продолжить"
                 popup.querySelector(".popup__text").innerText = data.message
@@ -94,11 +94,10 @@ window.addEventListener("load", ()=>{
                 })
             })
             .catch(error => {
-                console.error("Ошибка регистрации:", error.message);
-                popup.classList.add("active")
-                popupButton.innerText = "Попробовать еще раз"
-                popup.querySelector(".popup__text").innerText = error.message
-                popupButton.addEventListener("click", ()=>{
+                    popup.classList.add("active")
+                    popupButton.innerText = "Попробовать еще раз"
+                    popup.querySelector(".popup__text").innerText = error.message
+                    popupButton.addEventListener("click", ()=>{
                     popup.classList.remove("active")
                 })
             });
@@ -122,14 +121,12 @@ window.addEventListener("load", ()=>{
                 body: JSON.stringify({ username: username, password: password })
             })
             .then(response => {
-                console.log("Ответ от /login:", response.status);
                 if (!response.ok) {
                 return response.json().then(data => { throw new Error(data.error); });
                 }
                 return response.json();
             })
             .then(data => {
-                console.log("Данные от /login:", data);
                 popup.classList.add("active")
                 popupButton.innerText = "Продолжить"
                 popup.querySelector(".popup__text").innerText = data.message
@@ -142,7 +139,6 @@ window.addEventListener("load", ()=>{
                 })
             })
             .catch(error => {
-                console.error("Ошибка входа:", error);
                 popup.classList.add("active")
                 popupButton.innerText = "Попробовать еще раз"
                 popup.querySelector(".popup__text").innerText = error.message

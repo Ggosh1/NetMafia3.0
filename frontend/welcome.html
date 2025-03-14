@@ -27,14 +27,15 @@
     <h2 class="registration__title">Mafia Game</h2>
     <div class="forms__block">
       <form id="loginBlock" class="block__inputs">
-        <input type="text" class="registration__input" placeholder="Логин" data-login>
+        <input type="text" class="registration__input" placeholder="Логин" maxlength="20" data-login>
         <input type="text" class="registration__input" placeholder="Пароль" data-password>
+        <span class="warning__message"></span>
         <button type="submit" data-log class="auth__submit">Войти</button>
       </form>
       <form id="registBlock" class="block__inputs">
-        <input type="text" class="registration__input" placeholder="Логин" data-login>
+        <input type="text" class="registration__input" placeholder="Логин" maxlength="20" data-login>
         <input type="text" class="registration__input" placeholder="Пароль" data-password>
-        <input type="text" class="registration__input" placeholder="Почта" data-email>
+        <span class="warning__message"></span>
         <button type="submit" data-regist class="auth__submit">Регистрация</button>
       </form>
     </div>
