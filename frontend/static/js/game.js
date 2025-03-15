@@ -113,7 +113,7 @@ function connect() {
         log("ID игрока не найден. Зайдите через страницу входа.");
         return;
     }
-    ws = new WebSocket(`ws://84.201.150.47:8080/ws?id=${encodeURIComponent(playerId)}`);
+    ws = new WebSocket(`ws://158.160.138.22:80/ws?id=${encodeURIComponent(playerId)}`);
     ws.onopen = () => { log(`Connected as ${playerId}`); };
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
